@@ -8,23 +8,23 @@ import (
 	"net/http"
 )
 
-func NewTESTWriter(data string) (*TESTWriter) {
-	wr := &TESTWriter {
+func NewTestWriter(data string) (*TestWriter) {
+	wr := &TestWriter {
 		data: data,
 	}
 	
 	return wr
 }
 
-type TESTWriter struct {
+type TestWriter struct {
 	data string
 }
 
-func (wr TESTWriter) Execute(w http.ResponseWriter, r *http.Request) {
+func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 	wr.ExecuteData(w, r, wr.data)
 }
 
-func (wr *TESTWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
+func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
 	html := formatting.NewIndentingWriter(w)
 
 	html.Print(

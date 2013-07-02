@@ -8,7 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 type ghamlConfig struct {
@@ -53,7 +54,7 @@ func main() {
 
 // Runs 'go build' on the application.
 // This is a convenience so that the user
-// doesn't have to continually execute two commands
+// doesn't have to repeatedly execute two commands
 func runGoBuild(cfg *ghamlConfig) {
 	if cfg.verbose {
 		fmt.Println("Executing 'go build' command")
@@ -204,7 +205,7 @@ func compileFile(path string, f os.FileInfo) error {
 	}()
 
 	ext := filepath.Ext(f.Name())
-	rootNameStr := strings.ToTitle(TrimSuffix(f.Name(), ext))
+	rootNameStr := getProperCase(TrimSuffix(f.Name(), ext))
 	viewWriter := NewViewWriter(writer, parser.context, parser.root, rootNameStr)
 	viewWriter.WriteView()
 
@@ -231,4 +232,49 @@ func TrimSuffix(s, suffix string) string {
 // HasSuffix tests whether the string s ends with suffix.
 func HasSuffix(s, suffix string) bool {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
+}
+
+// Gets a proper case for a string (i.e. capitalised like a name)
+func getProperCase(s string) string {
+	// Generously 'borrowing' from strings.Map
+
+	// In the worst case, the string can grow when mapped, making
+	// things unpleasant.  But it's so rare we barge in assuming it's
+	// fine.  It could also shrink but that falls out naturally.
+	maxbytes := len(s) // length of b
+	nbytes := 0        // number of bytes encoded in b
+	var b []byte = make([]byte, maxbytes)
+
+	needsCapitalising := true
+
+	for _, c := range s {
+		r := c
+
+		// chars to skip, causing a capitalisation
+		if r == '.' || r == '-' || r == '_' || r == ' ' {
+			needsCapitalising = true
+			continue
+		}
+
+		if needsCapitalising {
+			r = unicode.ToTitle(r)
+			needsCapitalising = false
+		}
+
+		if r >= 0 {
+			wid := 1
+			if r >= utf8.RuneSelf {
+				wid = utf8.RuneLen(r)
+			}
+			if nbytes+wid > maxbytes {
+				// Grow the buffer.
+				maxbytes = maxbytes*2 + utf8.UTFMax
+				nb := make([]byte, maxbytes)
+				copy(nb, b[0:nbytes])
+				b = nb
+			}
+			nbytes += utf8.EncodeRune(b[nbytes:maxbytes], r)
+		}
+	}
+	return string(b[0:nbytes])
 }
