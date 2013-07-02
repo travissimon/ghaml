@@ -1,0 +1,20 @@
+@import (
+)
+
+@data_type: string
+
+%html
+  %head
+    %title= data
+  %body
+    %h1 Test output
+        
+    %div This is a test. Hope it works out
+    
+    %div{valign:top} supposed to be valign top here
+
+    %p This is stuff:
+    %ul
+      - for i := 0; i < 10; i++ {
+        %li Travis is COOL
+      - }
