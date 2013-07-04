@@ -164,10 +164,10 @@ func doesFileNeedsCompiling(filepath string, f os.FileInfo) bool {
 		return true
 	}
 
-	goFileInfo, _ := os.Stat(filepath)
+	goFileInfo, _ := os.Stat(goFilePath)
 
 	// check to see if haml file is newer
-	return f.ModTime().Before(goFileInfo.ModTime())
+	return f.ModTime().After(goFileInfo.ModTime())
 }
 
 // Compiles a haml file into a go file
