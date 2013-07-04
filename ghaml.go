@@ -152,7 +152,7 @@ func isHaml(filename string) bool {
 // Files need compiling if there is no *.go file, or if it is
 // older than the corresponding .haml file
 func doesFileNeedsCompiling(filepath string, f os.FileInfo) bool {
-	goFilePath, goFilename := getGoFilename(filepath, f)
+	goFilePath, _ := getGoFilename(filepath, f)
 	goFileExists, err := exists(goFilePath)
 
 	if err != nil {
@@ -189,10 +189,9 @@ func compileFile(path string, f os.FileInfo) error {
 	parser := NewParser(f.Name(), string(contents))
 	parser.Parse()
 
-	goFileStr := getGoFilename(path, f)
+	goFilePath, _ := getGoFilename(path, f)
 
-	dir := filepath.Dir(path)
-	goFile, err := os.Create(filepath.Join(dir, goFileStr))
+	goFile, err := os.Create(goFilePath)
 	if err != nil {
 		return err
 	}
@@ -220,7 +219,7 @@ func getGoFilename(path string, f os.FileInfo) (goFilepath, goFilename string) {
 	goFilename = rootNameStr + ".go"
 
 	dir := filepath.Dir(path)
-	goFilePath = filepath.Join(dir, goFilename)
+	goFilepath = filepath.Join(dir, goFilename)
 
 	return
 }
