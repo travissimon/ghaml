@@ -33,7 +33,7 @@ func (w *ViewWriter) WriteView() {
 	src.Println("")
 	src.Println("import (")
 	src.IncrIndent()
-	src.Println("\"formatting\"")
+	src.Println("\"github.com/travissimon/formatting\"")
 	src.Println("\"net/http\"")
 	for i := range w.context.imports {
 		src.Printf("%q\n", w.context.imports[i])
@@ -140,7 +140,7 @@ func (w *ViewWriter) WriteNode(nd *Node, haml *formatting.IndentingWriter, src *
 	haml.Printf("</%s>\n", nd.name)
 }
 
-var TEXT_BREAK_LENGTH = 120
+var TEXT_BREAK_LENGTH = 100
 
 func (vw *ViewWriter) writeLongText(text string, w *formatting.IndentingWriter) {
 	// create index of spaces in string
@@ -153,8 +153,8 @@ func (vw *ViewWriter) writeLongText(text string, w *formatting.IndentingWriter) 
 		distance := idx - start
 		if distance > TEXT_BREAK_LENGTH {
 			w.Println(text[start:idx])
+			start = idx + 1
 		}
-		start = idx
 	}
 	w.Println(text[start:])
 }

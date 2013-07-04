@@ -4,7 +4,7 @@ package main
 // EDIT THE .haml FILE INSTEAD
 
 import (
-	"formatting"
+	"github.com/travissimon/formatting"
 	"net/http"
 )
 
@@ -41,7 +41,7 @@ func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data s
 	</head>
 	<body>
 		<h1>
-			 output
+			Test output
 			<div></div>
 		</h1>
 		<div>This is a test. Hope it works out</div>

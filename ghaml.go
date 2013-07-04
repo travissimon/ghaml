@@ -86,13 +86,13 @@ func checkFileForDeletion(path string, f os.FileInfo, err error, cfg *ghamlConfi
 		return nil
 	}
 	if isHaml(f.Name()) {
-		goFilename := getGoFilename(path, f)
-		dir := filepath.Dir(path)
-		goFilePath := filepath.Join(dir, goFilename)
+		goFilePath, goFilename := getGoFilename(path, f)
 		exists, err := exists(goFilePath)
+
 		if err != nil {
 			panic(err)
 		}
+
 		if cfg.verbose {
 			if exists {
 				fmt.Printf("Removing file: %s\n", goFilename)
@@ -152,8 +152,8 @@ func isHaml(filename string) bool {
 // Files need compiling if there is no *.go file, or if it is
 // older than the corresponding .haml file
 func doesFileNeedsCompiling(filepath string, f os.FileInfo) bool {
-	goFilename := getGoFilename(filepath, f)
-	goFileExists, err := exists(goFilename)
+	goFilePath, goFilename := getGoFilename(filepath, f)
+	goFileExists, err := exists(goFilePath)
 
 	if err != nil {
 		panic(err)
@@ -165,6 +165,7 @@ func doesFileNeedsCompiling(filepath string, f os.FileInfo) bool {
 	}
 
 	goFileInfo, _ := os.Stat(filepath)
+
 	// check to see if haml file is newer
 	return f.ModTime().Before(goFileInfo.ModTime())
 }
@@ -213,10 +214,15 @@ func compileFile(path string, f os.FileInfo) error {
 }
 
 // Utility function to get the go version of a haml filename
-func getGoFilename(path string, f os.FileInfo) string {
+func getGoFilename(path string, f os.FileInfo) (goFilepath, goFilename string) {
 	ext := filepath.Ext(f.Name())
 	rootNameStr := TrimSuffix(f.Name(), ext)
-	return rootNameStr + ".go"
+	goFilename = rootNameStr + ".go"
+
+	dir := filepath.Dir(path)
+	goFilePath = filepath.Join(dir, goFilename)
+
+	return
 }
 
 // from Go 1.1 sources
@@ -234,7 +240,7 @@ func HasSuffix(s, suffix string) bool {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }
 
-// Gets a proper case for a string (i.e. capitalised like a name)
+// Gets a proper case for a string (i.e. capitalised like a proper noun)
 func getProperCase(s string) string {
 	// Generously 'borrowing' from strings.Map
 
@@ -250,7 +256,7 @@ func getProperCase(s string) string {
 	for _, c := range s {
 		r := c
 
-		// chars to skip, causing a capitalisation
+		// chars to skip and be followed by capitalisation
 		if r == '.' || r == '-' || r == '_' || r == ' ' {
 			needsCapitalising = true
 			continue

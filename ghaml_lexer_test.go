@@ -322,6 +322,17 @@ func Test_MultipleImports(t *testing.T) {
 	testLexeme(lexeme, itemImport, "strings", t)
 }
 
+func Test_TextStartsWithHyperlink(t *testing.T) {
+	input := "  <a href='/'>Hey</a>"
+	l := lex("hyperlink", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "  ", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemText, "<a href='/'>Hey</a>", t)
+}
+
 func testLexeme(l lexeme, expectedType lexItemType, expectedVal string, t *testing.T) {
 	if l.typ != expectedType {
 		t.Errorf("lexeme item type (%q) not as expected (%q)", l.typ, expectedType)

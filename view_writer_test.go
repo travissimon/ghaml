@@ -5,6 +5,8 @@ import (
 	// "os"
 	"bytes"
 	"fmt"
+	"github.com/travissimon/formatting"
+	"strings"
 	"testing"
 )
 
@@ -65,8 +67,8 @@ func Test_FormattingShortText(t *testing.T) {
 func Test_FormattingOneWrap(t *testing.T) {
 	txt := genString(130, 10)
 	expected :=
-		`123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 
-123456789 
+		`123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789
+123456789 123456789 
 `
 
 	testFormatStr(txt, expected, t)
@@ -87,14 +89,14 @@ func genString(count int, moduloToSpace int) string {
 func testFormatStr(s string, expected string, t *testing.T) {
 	vw := NewViewWriter(nil, nil, nil, "")
 	buffer := bytes.NewBuffer(make([]byte, 0))
-	ind := NewIndentingWriter(buffer)
+	ind := formatting.NewIndentingWriter(buffer)
 
 	vw.writeLongText(s, ind)
 
 	result := buffer.String()
 	if result != expected {
 		t.Error("result not as expected")
-		t.Log(fmt.Sprintf("Expected: [%s]", expected))
-		t.Log(fmt.Sprintf("Output: [%s]", result))
+		t.Log(fmt.Sprintf("Expected: [%s]", strings.Replace(expected, " ", "+", -1)))
+		t.Log(fmt.Sprintf("Output: [%s]", strings.Replace(result, " ", "+", -1)))
 	}
 }
