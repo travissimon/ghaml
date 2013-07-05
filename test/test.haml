@@ -5,16 +5,16 @@
 
 %html
   %head
-    %title= data
+    %title= "Hello, ", data
   %body
-    %h1 Test output
+    %h1= "Hello, ", data
         
-    %div This is a test. Hope it works out
+    %div.contentClass
+      This is child content for the div above. Note that
+      HAML is space-sensitive, so all text indented at
+      this level is encased in the div.
     
-    %div{valign:top} supposed to be valign top here
-
-    %p This is stuff:
-    %ul
+    %ul{type:disc}
       - for i := 0; i < 10; i++ {
-        %li Travis is COOL
+        %li= "Item: ", i
       - }
