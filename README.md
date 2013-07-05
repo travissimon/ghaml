@@ -46,7 +46,7 @@ A look at a Template
           The .operator (think of the '.' css selector') lets
           you create a div with the given class. For example
           this text will be wrapped in a div that looks like
-          this: `&lt;div class="implicit_class"&gt> ...`
+          this: `<div class="implicit_class">...`
 		
         %ul{type:disc}
           - for i := 0; i < 10; i++ { // arbitrary go code
