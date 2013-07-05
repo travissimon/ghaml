@@ -33,11 +33,21 @@ A look at a Template
     %body
       %h1= "Hello, ", data
         
-      %div.contentClass
+      %div
 	    This is child content for the div above. Note that
 		HAML is space-sensitive, so all text indented at
         this level is encased in the div.
     
+      #id_div
+        You can use the # operator as a shortcut to create
+        a div with the given id.
+
+      .implicit_class
+        The .operator (think of the '.' css selector') lets
+        you create a div with the given class. For example
+        this text will be wrapped in a div that looks like
+        this: `&lt;div class="implicit_class"&gt> ...`
+		
       %ul{type:disc}
         - for i := 0; i < 10; i++ { // arbitrary go code
           %li= "Item: ", i
@@ -52,3 +62,15 @@ The ghaml template above illustrates many features of Ghaml templates:
   the variadic parameter definition of the `fmt.Print()` function. Therefore
   variables and strings can be concatenated by seperating them with commas
 * The `-` operator lets the developer execute arbitrary Go code.
+
+Ghaml command syntax
+====================
+
+The default workflow is to use the ghaml command in your working directory.
+This will compile all ghaml template, and then run the 'go build' command.
+Command line options are:
+
+* -v Output verbose (as in 'some') comments on what is going on
+* -clean Remove all generated *.go files
+* -nogo Do not run the 'go build' command. This might be useful in a
+   build script

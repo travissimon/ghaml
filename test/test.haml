@@ -9,10 +9,20 @@
   %body
     %h1= "Hello, ", data
         
-    %div.contentClass
+    %div
       This is child content for the div above. Note that
       HAML is space-sensitive, so all text indented at
       this level is encased in the div.
+
+    #id_div
+      You can use the # operator as a shortcut to create
+      a div with the given id.
+
+    .implicit_class
+      The .operator (think of the '.' css selector') lets
+      you create a div with the given class. For example
+      this text will be wrapped in a div that looks like
+      this: `&lt;div class="implicit_class"&gt> ...`
     
     %ul{type:disc}
       - for i := 0; i < 10; i++ {
