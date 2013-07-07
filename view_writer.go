@@ -104,7 +104,7 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string) {
 
 	currentHtmlIndex := 0
 	for n := w.rootNode.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.WriteNode(n.Value.(*Node), htmlWriter, srcWriter, currentHtmlIndex)
+		currentHtmlIndex = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, currentHtmlIndex)
 	}
 
 	// close quote for html Array
@@ -116,25 +116,25 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string) {
 }
 
 // Recursive function to write parsed HAML Nodes
-func (w *ViewWriter) WriteNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
+func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
 
 	if nd.name == "code_output" {
-		return w.WriteCodeOutput(nd, haml, src, currentHtmlIndex)
+		return w.writeCodeOutput(nd, haml, src, currentHtmlIndex)
 	} else if nd.name == "code_execution" {
-		return w.WriteCodeExecution(nd, haml, src, currentHtmlIndex)
+		return w.writeCodeExecution(nd, haml, src, currentHtmlIndex)
 	}
 
 	haml.Printf("<%s", nd.name)
 	if nd.id != nil {
-		w.WriteAttribute(nd.id, haml)
+		w.writeAttribute(nd.id, haml)
 	}
 	if nd.class != nil {
-		w.WriteAttribute(nd.class, haml)
+		w.writeAttribute(nd.class, haml)
 	}
 
 	for attrEl := nd.attributes.Front(); attrEl != nil; attrEl = attrEl.Next() {
 		attr := attrEl.Value.(*nameValueStr)
-		w.WriteAttribute(attr, haml)
+		w.writeAttribute(attr, haml)
 	}
 
 	if nd.selfClosing {
@@ -162,7 +162,7 @@ func (w *ViewWriter) WriteNode(nd *Node, haml *formatting.IndentingWriter, src *
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.WriteNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
 	}
 
 	haml.DecrIndent()
@@ -209,11 +209,11 @@ func (w *ViewWriter) canChildContentFitOnOneLine(nd *Node) bool {
 	return len(nd.text) < TEXT_BREAK_LENGTH && nd.children.Len() == 0
 }
 
-func (w *ViewWriter) WriteAttribute(attribute *nameValueStr, haml *formatting.IndentingWriter) {
+func (w *ViewWriter) writeAttribute(attribute *nameValueStr, haml *formatting.IndentingWriter) {
 	haml.Printf(" %s=\"%s\"", attribute.name, attribute.value)
 }
 
-func (w *ViewWriter) WriteCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
+func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
 	// end most recent haml output
 	haml.Println("`,")
 	// start next haml output (which will follow this code output
@@ -227,13 +227,13 @@ func (w *ViewWriter) WriteCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	src.Printf("fmt.Fprint(w, %s)\n", nd.text)
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.WriteNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
 	}
 
 	return currentHtmlIndex
 }
 
-func (w *ViewWriter) WriteCodeExecution(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
+func (w *ViewWriter) writeCodeExecution(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
 	// end most recent haml output
 	haml.Println("`,")
 	// start next haml output (which will follow this code output
@@ -261,7 +261,7 @@ func (w *ViewWriter) WriteCodeExecution(nd *Node, haml *formatting.IndentingWrit
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.WriteNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
 	}
 
 	return currentHtmlIndex

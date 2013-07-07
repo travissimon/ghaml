@@ -65,8 +65,6 @@ func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
-	html := formatting.NewIndentingWriter(w)
-
 	fmt.Fprint(w, TestArray[0])
 	fmt.Fprint(w, "Hello, ", data)
 	fmt.Fprint(w, TestArray[1])
@@ -77,5 +75,4 @@ func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data s
 		fmt.Fprint(w, "Item: ", i)
 		fmt.Frint(w, TestArray[4])
 	}
-
 }
