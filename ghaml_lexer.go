@@ -300,7 +300,7 @@ func lexContentStart(l *lexer) stateFn {
 
 // lexes the 'name' of something
 func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
-	specialChars := " #.%#$%{}:'\"/?=-"
+	specialChars := " #.%${}:'\"/?=-"
 	l.accept(specialChars)
 	l.ignore()
 	l.acceptRunUntil(specialChars + "\n\r")
