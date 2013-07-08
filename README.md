@@ -8,6 +8,8 @@ Ghaml achieves this by compiling ghaml templates into go code, which can then
 be compiled into your application directly. To ease this burden, the ghaml tool
 can call 'go build' for you, making a near seemless replacement.
 
+[![Build Status](https://travis-ci.org/travissimon/ghaml.png)](https://travis-ci.org/travissimon/ghaml)
+
 What is HAML?
 =============
 Haml stands for HTML Abstraction Markup Language, a templating system originally
