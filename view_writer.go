@@ -38,10 +38,9 @@ func (w *ViewWriter) WriteView() {
 	src.Println("import (")
 	src.IncrIndent()
 	src.Println("\"fmt\"")
-	src.Println("\"github.com/travissimon/formatting\"")
 	src.Println("\"net/http\"")
-	for i := range w.context.imports {
-		src.Printf("%q\n", w.context.imports[i])
+	for _, imp := range w.context.imports {
+		src.Printf("%q\n", imp)
 	}
 	src.DecrIndent()
 	src.Println(")")
@@ -220,7 +219,7 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	haml.Println("`")
 
 	// All call to write html from array 
-	src.Printf("fmt.Fprint(w, %sArray[%d])\n", w.destinationName, currentHtmlIndex)
+	src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
 	currentHtmlIndex++
 
 	// add call to print output
@@ -240,7 +239,7 @@ func (w *ViewWriter) writeCodeExecution(nd *Node, haml *formatting.IndentingWrit
 	haml.Println("`")
 
 	// All call to write html from array 
-	src.Printf("fmt.Frint(w, %sArray[%d])\n", w.destinationName, currentHtmlIndex)
+	src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
 	currentHtmlIndex++
 
 	// attempt to keep formatting across user code. 
