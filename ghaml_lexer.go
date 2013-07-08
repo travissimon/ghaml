@@ -45,6 +45,7 @@ const (
 	itemCodeExecution
 	itemDataType
 	itemImport
+	itemPackage
 )
 
 // pretty print items
@@ -65,6 +66,7 @@ var itemName = map[lexItemType]string{
 	itemCodeExecution:  "code execution",
 	itemDataType:       "data type",
 	itemImport:         "import",
+	itemPackage:        "package",
 }
 
 func (item lexItemType) String() string {
@@ -452,6 +454,9 @@ func lexMetadata(l *lexer) stateFn {
 	case "@import":
 		l.ignore()
 		return lexImports
+	case "@package":
+		l.ignore()
+		return lexPackage
 	}
 
 	l.errorf("Expected @data_type or @import. Received %q", metadataType)
@@ -462,7 +467,7 @@ func lexMetadata(l *lexer) stateFn {
 func lexDatatype(l *lexer) stateFn {
 	l.acceptRun(": ")
 	l.ignore()
-	l.acceptRunUntil("\n\r")
+	l.acceptRunUntil(" \n\r")
 	l.emit(itemDataType)
 	return lexLineEnd
 }
@@ -491,4 +496,12 @@ func lexImports(l *lexer) stateFn {
 		}
 	}
 	return nil
+}
+
+func lexPackage(l *lexer) stateFn {
+	l.acceptRun(": ")
+	l.ignore()
+	l.acceptRunUntil(" \n\r")
+	l.emit(itemPackage)
+	return lexLineEnd
 }

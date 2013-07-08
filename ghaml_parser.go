@@ -6,6 +6,7 @@ import (
 )
 
 type ParseContext struct {
+	pkg      string
 	dataType string
 	imports  []string
 }
@@ -29,6 +30,7 @@ func NewParser(name, input string) *GhamlParser {
 		lineNo: 0,
 		tags:   new(stack),
 		context: &ParseContext{
+			pkg:      "main",
 			dataType: "interface{}",
 			imports:  make([]string, 0),
 		},
@@ -111,6 +113,11 @@ func (g *GhamlParser) setDataType(dataType string) {
 	g.context.dataType = dataType
 }
 
+// setPackage sets the package for the generated code
+func (g *GhamlParser) setPackage(pkgName string) {
+	g.context.pkg = pkgName
+}
+
 // gets the current indent tag
 func (g *GhamlParser) getCurrentTagIndent() *tagIndentation {
 	return g.tags.peek().(*tagIndentation)
@@ -139,6 +146,8 @@ Loop:
 			g.addImport(lexeme.val)
 		case itemDataType:
 			g.setDataType(lexeme.val)
+		case itemPackage:
+			g.setPackage(lexeme.val)
 		case itemDoctype:
 			g.handleDoctype(lexeme)
 		case itemCodeOutput:

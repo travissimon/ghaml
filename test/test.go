@@ -1,11 +1,10 @@
-package main
+package test
 
 // THIS IS A GENERATED FILE, EDITS WILL BE OVERWRITTEN
 // EDIT THE .haml FILE INSTEAD
 
 import (
 	"fmt"
-	"github.com/travissimon/formatting"
 	"net/http"
 )
 
@@ -65,14 +64,14 @@ func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
-	fmt.Fprint(w, TestArray[0])
+	fmt.Fprint(w, TestHtml[0])
 	fmt.Fprint(w, "Hello, ", data)
-	fmt.Fprint(w, TestArray[1])
+	fmt.Fprint(w, TestHtml[1])
 	fmt.Fprint(w, "Hello, ", data)
-	fmt.Frint(w, TestArray[2])
+	fmt.Fprint(w, TestHtml[2])
 	for i := 0; i < 10; i++ {
-		fmt.Fprint(w, TestArray[3])
+		fmt.Fprint(w, TestHtml[3])
 		fmt.Fprint(w, "Item: ", i)
-		fmt.Frint(w, TestArray[4])
+		fmt.Fprint(w, TestHtml[4])
 	}
 }

@@ -30,7 +30,7 @@ func (w *ViewWriter) WriteView() {
 
 	htmlArr, srcOut := w.processNodes()
 
-	src.Println("package main")
+	src.Printf("package %s\n", w.context.pkg)
 	src.Println("")
 	src.Println("// THIS IS A GENERATED FILE, EDITS WILL BE OVERWRITTEN")
 	src.Println("// EDIT THE .haml FILE INSTEAD")
