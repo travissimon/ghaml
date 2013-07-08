@@ -76,3 +76,4 @@ Command line options are:
 * -clean Remove all generated *.go files
 * -nogo Do not run the 'go build' command. This might be useful in a
    build script
+* -f forces template regeneration
