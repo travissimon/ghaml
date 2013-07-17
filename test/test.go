@@ -6,6 +6,7 @@ package test
 import (
 	"fmt"
 	"net/http"
+	"text/template"
 )
 
 func NewTestWriter(data string) (*TestWriter) {
@@ -43,6 +44,8 @@ var TestHtml = [...]string{
 			 The .operator (think of the '.' css selector') lets you create a div with the given class. For example
 			this text will be wrapped in a div that looks like
 		</div>
+		`,
+		`
 		<div></div>
 		<ul type="disc">
 			`,
@@ -65,13 +68,15 @@ func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 
 func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
 	fmt.Fprint(w, TestHtml[0])
-	fmt.Fprint(w, "Hello, ", data)
-	fmt.Fprint(w, TestHtml[1])
-	fmt.Fprint(w, "Hello, ", data)
-	fmt.Fprint(w, TestHtml[2])
+	fmt.Fprint(w, template.HTMLEscaper("Hello, ", data))
+	fmt.Fprint(w, TestHtml[0])
+	fmt.Fprint(w, template.HTMLEscaper("Hello, ", data))
+	fmt.Fprint(w, TestHtml[0])
+	fmt.Fprint(w, "Unescaped (and dangerous) output: <i>", data, "</i>")
+	fmt.Fprint(w, TestHtml[0])
 	for i := 0; i < 10; i++ {
-		fmt.Fprint(w, TestHtml[3])
+		fmt.Fprint(w, TestHtml[1])
 		fmt.Fprint(w, "Item: ", i)
-		fmt.Fprint(w, TestHtml[4])
+		fmt.Fprint(w, TestHtml[0])
 	}
 }

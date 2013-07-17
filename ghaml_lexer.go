@@ -42,6 +42,7 @@ const (
 	itemHtmlComment
 	itemEOF
 	itemCodeOutput
+	itemRawCodeOutput
 	itemCodeExecution
 	itemDataType
 	itemImport
@@ -63,6 +64,7 @@ var itemName = map[lexItemType]string{
 	itemHtmlComment:    "Html comment",
 	itemEOF:            "EOF",
 	itemCodeOutput:     "code output",
+	itemRawCodeOutput:  "raw code output",
 	itemCodeExecution:  "code execution",
 	itemDataType:       "data type",
 	itemImport:         "import",
@@ -294,6 +296,8 @@ func lexContentStart(l *lexer) stateFn {
 		return lexHtmlComment
 	case '=':
 		return lexCodeOutput
+	case '|':
+		return lexRawCodeOutput
 	case '-':
 		return lexCodeExecution
 	}
@@ -302,7 +306,7 @@ func lexContentStart(l *lexer) stateFn {
 
 // lexes the 'name' of something
 func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
-	specialChars := " #.%${}:'\"/?=-"
+	specialChars := " #.%${}:'\"/?=|-"
 	l.accept(specialChars)
 	l.ignore()
 	l.acceptRunUntil(specialChars + "\n\r")
@@ -321,6 +325,8 @@ func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
 		return lexAttribute
 	case '=':
 		return lexCodeOutput
+	case '|':
+		return lexRawCodeOutput
 	case '-':
 		return lexCodeExecution
 	default:
@@ -407,7 +413,7 @@ func lexHtmlComment(l *lexer) stateFn {
 	return lexContentStart
 }
 
-// lexes markup for go code to be printed
+// lexes markup for output to be escaped and printed
 func lexCodeOutput(l *lexer) stateFn {
 	l.accept("=")
 	l.skipSpacesAndTabs()
@@ -421,6 +427,23 @@ Loop:
 	}
 	l.backup()
 	l.emit(itemCodeOutput)
+	return lexLineEnd
+}
+
+// lexes markup for output to be printed without XSS safety
+func lexRawCodeOutput(l *lexer) stateFn {
+	l.accept("|")
+	l.skipSpacesAndTabs()
+	l.ignore()
+Loop:
+	for {
+		switch l.next() {
+		case eof, '\n', '\r':
+			break Loop
+		}
+	}
+	l.backup()
+	l.emit(itemRawCodeOutput)
 	return lexLineEnd
 }
 

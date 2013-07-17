@@ -146,6 +146,20 @@ func Test_TagAndCodeOutput(t *testing.T) {
 	parseAndCompare(hamlStr, expStr, t)
 }
 
+func Test_RawCodeOutput(t *testing.T) {
+	hamlStr := "| fmt.Println(\"hi\")"
+	expStr := "raw_code_output (fmt.Println(\"hi\"))"
+
+	parseAndCompare(hamlStr, expStr, t)
+}
+
+func Test_TagAndRawCodeOutput(t *testing.T) {
+	hamlStr := "%p.hi| fmt.Println(\"hi\")"
+	expStr := "p class='hi'\n\traw_code_output (fmt.Println(\"hi\"))"
+
+	parseAndCompare(hamlStr, expStr, t)
+}
+
 func Test_ParserDataType(t *testing.T) {
 	hamlStr := "@data_type: []string"
 	parser := NewParser(hamlStr, hamlStr)

@@ -28,7 +28,7 @@ func NewViewWriter(wr io.Writer, context *ParseContext, rootNode *Node, writerNa
 func (w *ViewWriter) WriteView() {
 	src := formatting.NewIndentingWriter(w.writer)
 
-	htmlArr, srcOut := w.processNodes()
+	htmlArr, srcOut, escapedHtml := w.processNodes()
 
 	src.Printf("package %s\n", w.context.pkg)
 	src.Println("")
@@ -39,6 +39,9 @@ func (w *ViewWriter) WriteView() {
 	src.IncrIndent()
 	src.Println("\"fmt\"")
 	src.Println("\"net/http\"")
+	if escapedHtml {
+		src.Println("\"text/template\"")
+	}
 	for _, imp := range w.context.imports {
 		src.Printf("%q\n", imp)
 	}
@@ -89,7 +92,7 @@ func (w *ViewWriter) WriteView() {
 //	fmt.Fprint(w, HtmlArray[0])
 //	fmt.Fprint(w, "Custom string: ", data)
 //  fmt.Fprint(w, HtmlArray[1]) ...
-func (w *ViewWriter) processNodes() (htmlArray string, src string) {
+func (w *ViewWriter) processNodes() (htmlArray string, src string, escapedHtml bool) {
 	htmlBuffer := bytes.NewBuffer(make([]byte, 0))
 	htmlWriter := formatting.NewIndentingWriter(htmlBuffer)
 	srcBuffer := bytes.NewBuffer(make([]byte, 0))
@@ -102,8 +105,10 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string) {
 	srcWriter.IncrIndent()
 
 	currentHtmlIndex := 0
+	esc := false
 	for n := w.rootNode.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, currentHtmlIndex)
+		currentHtmlIndex, esc = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, currentHtmlIndex)
+		escapedHtml = escapedHtml || esc
 	}
 
 	// close quote for html Array
@@ -115,12 +120,20 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string) {
 }
 
 // Recursive function to write parsed HAML Nodes
-func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
-
+// We have to return a bool indicating if we have escaped any HTML (XSS protection)
+// so that we know if we need to include the templating library for that function
+func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) (htmlIndex int, escapedHtml bool) {
+	escapedHtml = false
 	if nd.name == "code_output" {
-		return w.writeCodeOutput(nd, haml, src, currentHtmlIndex)
+		escapedHtml = true
+		htmlIndex = w.writeCodeOutput(nd, haml, src, currentHtmlIndex, true)
+		return
+	} else if nd.name == "raw_code_output" {
+		htmlIndex = w.writeCodeOutput(nd, haml, src, currentHtmlIndex, false)
+		return
 	} else if nd.name == "code_execution" {
-		return w.writeCodeExecution(nd, haml, src, currentHtmlIndex)
+		htmlIndex = w.writeCodeExecution(nd, haml, src, currentHtmlIndex)
+		return
 	}
 
 	haml.Printf("<%s", nd.name)
@@ -138,7 +151,7 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 
 	if nd.selfClosing {
 		haml.Println(" />`)")
-		return currentHtmlIndex
+		return
 	} else {
 		haml.Print(">")
 	}
@@ -148,7 +161,7 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 	// If tag only contains short text, add it on same line
 	if w.canChildContentFitOnOneLine(nd) {
 		haml.Printf("%s</%s>\n", nd.text, nd.name)
-		return currentHtmlIndex
+		return
 	}
 
 	// We either have long text, child tags or both
@@ -160,14 +173,16 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 		w.writeLongText(nd.text, haml)
 	}
 
+	esc := false
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex, esc = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		escapedHtml = escapedHtml || esc
 	}
 
 	haml.DecrIndent()
 	haml.Printf("</%s>\n", nd.name)
 
-	return currentHtmlIndex
+	return
 }
 
 var TEXT_BREAK_LENGTH = 100
@@ -212,7 +227,7 @@ func (w *ViewWriter) writeAttribute(attribute *nameValueStr, haml *formatting.In
 	haml.Printf(" %s=\"%s\"", attribute.name, attribute.value)
 }
 
-func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
+func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int, escapeHtml bool) int {
 	// end most recent haml output
 	haml.Println("`,")
 	// start next haml output (which will follow this code output
@@ -223,10 +238,14 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	currentHtmlIndex++
 
 	// add call to print output
-	src.Printf("fmt.Fprint(w, %s)\n", nd.text)
+	if escapeHtml {
+		src.Printf("fmt.Fprint(w, template.HTMLEscaper(%s))\n", nd.text)
+	} else {
+		src.Printf("fmt.Fprint(w, %s)\n", nd.text)
+	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex, _ = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
 	}
 
 	return currentHtmlIndex
@@ -260,7 +279,7 @@ func (w *ViewWriter) writeCodeExecution(nd *Node, haml *formatting.IndentingWrit
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		currentHtmlIndex, _ = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
 	}
 
 	return currentHtmlIndex

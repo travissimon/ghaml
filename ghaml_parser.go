@@ -152,6 +152,8 @@ Loop:
 			g.handleDoctype(lexeme)
 		case itemCodeOutput:
 			g.handleCodeOutput(lexeme)
+		case itemRawCodeOutput:
+			g.handleRawCodeOutput(lexeme)
 		case itemCodeExecution:
 			g.handleCodeExecution(lexeme)
 		case itemIndentation:
@@ -197,6 +199,11 @@ func (g *GhamlParser) handleCodeOutput(l lexeme) {
 	g.buildCodeNode("code_output", l)
 }
 
+// parses a raw code output token (| ...)
+func (g *GhamlParser) handleRawCodeOutput(l lexeme) {
+	g.buildCodeNode("raw_code_output", l)
+}
+
 // parses a code execution token (- ...)
 func (g *GhamlParser) handleCodeExecution(l lexeme) {
 	g.buildCodeNode("code_execution", l)
@@ -226,6 +233,9 @@ func (g *GhamlParser) parseLineStart(indentation string, firstItem lexeme) {
 		firstNode = buildNode(firstItem.val)
 	} else if firstItem.typ == itemCodeOutput {
 		firstNode = buildNode("code_output")
+		firstNode.text = firstItem.val
+	} else if firstItem.typ == itemRawCodeOutput {
+		firstNode = buildNode("raw_code_output")
 		firstNode.text = firstItem.val
 	} else if firstItem.typ == itemCodeExecution {
 		firstNode = buildNode("code_execution")

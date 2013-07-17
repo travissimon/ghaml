@@ -284,6 +284,31 @@ func Test_TagEquals(t *testing.T) {
 	testLexeme(lexeme, itemCodeOutput, "array[i]", t)
 }
 
+func Test_Pipe(t *testing.T) {
+	input := "| raw_code_output"
+	l := lex("pipe", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemRawCodeOutput, "raw_code_output", t)
+}
+
+func Test_PipeEquals(t *testing.T) {
+	input := "%p| array[i]"
+	l := lex("pipe_code test", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemTag, "p", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemRawCodeOutput, "array[i]", t)
+}
+
 func Test_Dash(t *testing.T) {
 	input := "- fmt.Println()"
 	l := lex("dash", input)

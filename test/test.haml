@@ -25,8 +25,10 @@
       you create a div with the given class. For example
       this text will be wrapped in a div that looks like
 
+    | "Unescaped (and dangerous) output: <i>", data, "</i>"
+
     
     %ul{type:disc}
       - for i := 0; i < 10; i++ {
-        %li= "Item: ", i
+        %li| "Item: ", i
       - }
