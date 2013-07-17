@@ -62,8 +62,11 @@ The ghaml template above illustrates many features of Ghaml templates:
   be a struct of view content.
 * Outputting tag content via the `=` operator is syntactically equal to
   the variadic parameter definition of the `fmt.Print()` function. Therefore
-  variables and strings can be concatenated by seperating them with commas
+  variables and strings can be concatenated by seperating them with commas.
+  Further, the '=' operator protects against Cross-Site Scripting (XSS) attacks.
 * The `-` operator lets the developer execute arbitrary Go code.
+* The special '|' operator is equal to the '=' operator, but does not perform
+  HTML encoding, allowing for formatted output, with the risk of XSS attacks.
 
 Ghaml command syntax
 ====================
