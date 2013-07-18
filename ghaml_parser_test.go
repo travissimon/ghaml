@@ -134,28 +134,28 @@ func Test_Attributes(t *testing.T) {
 
 func Test_CodeOutput(t *testing.T) {
 	hamlStr := "= fmt.Println(\"hi\")"
-	expStr := "code_output (fmt.Println(\"hi\"))"
+	expStr := "code_output_dynamic (fmt.Println(\"hi\"))"
 
 	parseAndCompare(hamlStr, expStr, t)
 }
 
 func Test_TagAndCodeOutput(t *testing.T) {
-	hamlStr := "%p.hi= fmt.Println(\"hi\")"
-	expStr := "p class='hi'\n\tcode_output (fmt.Println(\"hi\"))"
+	hamlStr := "%p.hi= \"hi\", fmt.Println(\"hi\")"
+	expStr := "p class='hi'\n\tcode_output_static (hi)\n\tcode_output_dynamic (fmt.Println(\"hi\"))"
 
 	parseAndCompare(hamlStr, expStr, t)
 }
 
 func Test_RawCodeOutput(t *testing.T) {
-	hamlStr := "| fmt.Println(\"hi\")"
-	expStr := "raw_code_output (fmt.Println(\"hi\"))"
+	hamlStr := `!= "<i>", output, "</i>"`
+	expStr := "code_output_raw (\"<i>\", output, \"</i>\")"
 
 	parseAndCompare(hamlStr, expStr, t)
 }
 
 func Test_TagAndRawCodeOutput(t *testing.T) {
-	hamlStr := "%p.hi| fmt.Println(\"hi\")"
-	expStr := "p class='hi'\n\traw_code_output (fmt.Println(\"hi\"))"
+	hamlStr := "%p.hi!= fmt.Println(\"hi\")"
+	expStr := "p class='hi'\n\tcode_output_raw (fmt.Println(\"hi\"))"
 
 	parseAndCompare(hamlStr, expStr, t)
 }

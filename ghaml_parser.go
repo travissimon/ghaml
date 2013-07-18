@@ -150,12 +150,8 @@ Loop:
 			g.setPackage(lexeme.val)
 		case itemDoctype:
 			g.handleDoctype(lexeme)
-		case itemCodeOutput:
+		case itemCodeOutputStatic, itemCodeOutputDynamic, itemCodeOutputRaw, itemCodeExecution:
 			g.handleCodeOutput(lexeme)
-		case itemRawCodeOutput:
-			g.handleRawCodeOutput(lexeme)
-		case itemCodeExecution:
-			g.handleCodeExecution(lexeme)
 		case itemIndentation:
 			indentation := lexeme.val
 			nextLexeme := g.lexer.nextItem()
@@ -196,17 +192,16 @@ func (g *GhamlParser) handleDoctype(l lexeme) {
 
 // parses a code output token (= ...)
 func (g *GhamlParser) handleCodeOutput(l lexeme) {
-	g.buildCodeNode("code_output", l)
-}
-
-// parses a raw code output token (| ...)
-func (g *GhamlParser) handleRawCodeOutput(l lexeme) {
-	g.buildCodeNode("raw_code_output", l)
-}
-
-// parses a code execution token (- ...)
-func (g *GhamlParser) handleCodeExecution(l lexeme) {
-	g.buildCodeNode("code_execution", l)
+	switch l.typ {
+	case itemCodeOutputStatic:
+		g.buildCodeNode("code_output_static", l)
+	case itemCodeOutputDynamic:
+		g.buildCodeNode("code_output_dynamic", l)
+	case itemCodeOutputRaw:
+		g.buildCodeNode("code_output_raw", l)
+	case itemCodeExecution:
+		g.buildCodeNode("code_execution", l)
+	}
 }
 
 func (g *GhamlParser) buildCodeNode(nodeName string, l lexeme) {
@@ -229,18 +224,23 @@ func (g *GhamlParser) parseLineStart(indentation string, firstItem lexeme) {
 	}
 
 	var firstNode *Node
-	if firstItem.typ == itemTag {
+
+	switch firstItem.typ {
+	case itemTag:
 		firstNode = buildNode(firstItem.val)
-	} else if firstItem.typ == itemCodeOutput {
-		firstNode = buildNode("code_output")
+	case itemCodeOutputStatic:
+		firstNode = buildNode("code_output_static")
 		firstNode.text = firstItem.val
-	} else if firstItem.typ == itemRawCodeOutput {
-		firstNode = buildNode("raw_code_output")
+	case itemCodeOutputDynamic:
+		firstNode = buildNode("code_output_dynamic")
 		firstNode.text = firstItem.val
-	} else if firstItem.typ == itemCodeExecution {
+	case itemCodeOutputRaw:
+		firstNode = buildNode("code_output_raw")
+		firstNode.text = firstItem.val
+	case itemCodeExecution:
 		firstNode = buildNode("code_execution")
 		firstNode.text = firstItem.val
-	} else {
+	default:
 		firstNode = buildNode("div")
 	}
 
