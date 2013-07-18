@@ -455,23 +455,38 @@ Loop:
 // Lexes static strings generated in a template.
 // E.g. = "This is static", not_static
 func lexCodeOutputStatic(l *lexer) {
+	backtickQuoting := false
+	if l.peek() == '`' {
+		backtickQuoting = true
+	}
+
 	l.accept("\"`")
 	l.ignore()
 	for {
 		switch l.next() {
 		case eof, '\n', '\r':
-			l.errorf("Unterminated string")
+			l.errorf("Unterminated string: %q", l.previewCurrent())
 			return
 		case '\\':
 			if l.peek() == '"' { // escaped quote - not the end of the string
 				l.next()
 			}
-		case '"', '`':
-			l.backup()
-			l.emit(itemCodeOutputStatic)
-			l.next()
-			l.ignore()
-			return
+		case '"':
+			if !backtickQuoting {
+				l.backup()
+				l.emit(itemCodeOutputStatic)
+				l.next()
+				l.ignore()
+				return
+			}
+		case '`':
+			if backtickQuoting {
+				l.backup()
+				l.emit(itemCodeOutputStatic)
+				l.next()
+				l.ignore()
+				return
+			}
 		}
 	}
 }

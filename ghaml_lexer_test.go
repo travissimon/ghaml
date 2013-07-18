@@ -307,6 +307,20 @@ func Test_QuotedCodeOutput(t *testing.T) {
 	testLexeme(lexeme, itemCodeOutputDynamic, "dynamic", t)
 }
 
+func Test_BacktickCodeOutput(t *testing.T) {
+	input := "= `abc \"quoted\"`, dynamic"
+	l := lex("tag_code test", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputStatic, "abc \"quoted\"", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputDynamic, "dynamic", t)
+}
+
 func Test_Raw(t *testing.T) {
 	input := "!= raw_code_output"
 	l := lex("raw", input)

@@ -96,12 +96,22 @@ func (w *ViewWriter) WriteView() {
 	src.Println("}")
 	src.Println("")
 	src.Printf("func (wr *%sWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data %s) {\n", w.destinationName, w.context.dataType)
-
+	src.Printf("	var err error = nil\n")
 	// output from processNodes
 	// This is calls to htmlArray and code generated Prints
 	src.Print(srcOut)
 
 	src.Println("}")
+	src.Println("")
+	src.Printf("func handle%sError(err error) {\n", w.destinationName)
+	src.IncrIndent()
+	src.Printf("if err != nil {")
+	src.IncrIndent()
+	src.Printf("fmt.Println(err)")
+	src.DecrIndent()
+	src.Printf("}")
+	src.DecrIndent()
+	src.Printf("}")
 }
 
 // processNodes generates code from the parsed haml nodes
@@ -139,6 +149,11 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string, patterns stri
 
 	// Ensure final html is written
 	srcWriter.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, htmlIndex)
+
+	// if our last op was writing code, we need to close pattern string
+	if w.writingCodeOutput {
+		patternWriter.Println("`,")
+	}
 
 	htmlArray = htmlBuffer.String()
 	src = srcBuffer.String()
@@ -286,7 +301,8 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 		src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
 
 		if nodeType == Static || nodeType == Dynamic {
-			src.Printf("%sTemplates[%d].Execute(w, data)\n", w.destinationName, currentPatternIndex)
+			src.Printf("err = %sTemplates[%d].Execute(w, data)\n", w.destinationName, currentPatternIndex)
+			src.Printf("handle%sError(err)\n", w.destinationName)
 			// start a new pattern string
 			pattern.Print("`")
 
@@ -314,7 +330,7 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 		p = strings.Replace(p, "data", ".", -1)
 		pattern.Printf("{{%s}}", p)
 	case Raw:
-		src.Printf("fmt.Fprintf(w, %s)\n", nd.text)
+		src.Printf("fmt.Fprint(w, %s)\n", nd.text)
 	case Execution:
 		// attempt to keep formatting across user code. 
 		// Here we're checking to see if this is the end of a block statement

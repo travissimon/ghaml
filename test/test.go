@@ -83,15 +83,21 @@ func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
+	var err error = nil
 	fmt.Fprint(w, TestHtml[0])
-	TestTemplates[0].Execute(w, data)
+	err = TestTemplates[0].Execute(w, data)
+	handleTestError(err)
 	fmt.Fprint(w, TestHtml[1])
-	TestTemplates[1].Execute(w, data)
+	err = TestTemplates[1].Execute(w, data)
+	handleTestError(err)
 	fmt.Fprint(w, TestHtml[2])
 	for i := 0; i < 10; i++ {
 		fmt.Fprint(w, TestHtml[3])
-		fmt.Fprintf(w, "Item: ", i)
+		fmt.Fprint(w, "Item: ", i)
 		fmt.Fprint(w, TestHtml[4])
 	}
 	fmt.Fprint(w, TestHtml[5])
 }
+
+func handleTestError(err error) {
+	if err != nil {fmt.Println(err)}}

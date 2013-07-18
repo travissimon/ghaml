@@ -22,26 +22,163 @@
           = data.G
         - }
 
-    #rangeBody
-      .expected!= "&lt;a&gt;&lt;b&gt;"
+    
+    - //#rangeBody
+      - //.expected!= "&lt;a&gt;&lt;b&gt;"
 
-      .actual
-        - for d := range data.A {
-          = d
-        - }
+      - //.actual
+        - // for d := range data.A {
+          - //= d
+        - // }
 
     #constant
       .expected!= `<a href="/search?q=%27a%3cb%27">`
-
-      .actual= `<a href="/search?q=`, data.constant, `">`
+      .actual= `<a href="/search?q=`, data.Constant, `">`
 
     #multipleAttrs
       .expected!= "<a b=1 c=&lt;Hello&gt;>"
-
-      .actual= "<a b=1 c=", data.H ">"
+      .actual= "<a b=1 c=", data.H, ">"
 
     #urlStartRel
-      .expected!= `<a href='{{"/foo/bar?a=b&c=d"}}'>`
+      .expected!= `<a href='/foo/bar?a=b&amp;c=d'>`
+      .actual= `<a href='`, data.UrlStartRel, `'>`
 
-      .actual= `<a href='`, data.urlStartRel, `'>`
-        
+    #urlStartAbsOk
+      .expected!= `<a href='http://example.com/foo/bar?a=b&amp;c=d'>`
+      .actual= `<a href='`, data.UrlStartAbsOk, `'>`
+
+    #protocolRelativeURLStart
+      .expected!= `<a href='//example.com:8000/foo/bar?a=b&amp;c=d'>`
+      .actual= `<a href='`, data.ProtocolRelativeURLStart, `'>`
+
+    #pathRelativStart
+      .expected!= `<a href="/javascript:80/foo/bar">`
+      .actual= `<a href="`, data.PathRelativeURLStart, `">`
+
+    #dangerousURLStart
+      .expected!= `<a href='#ZgotmplZ'>`
+      .actual= `<a href='`, data.DangerousURLStart, `'>`
+
+    #dangerousURLStart2
+      .expected!= `<a href=' #ZgotmplZ'>`
+      .actual= `<a href=' `, data.DangerousURLStart, `'>`
+
+    #nonHierURL
+      .expected!= `<a href=mailto:Muhammed%20%22The%20Greatest%22%20Ali%20%3cm.ali@example.com%3e>`
+      .actual= `<a href=`, data.NonHierURL, `>`
+
+    #urlPath
+      .expected!= `<a href='http://javascript:80/foo'>`
+      .actual= `<a href='http://`, data.UrlPath, `/foo'>`
+
+    #urlQuery
+      .expected!= `<a href='/search?q=%3cHello%3e'>`
+      .actual= `<a href='/search?q=`, data.H, `'>`
+
+    #urlFragment
+      .expected!= `<a href='/faq#%3cHello%3e'>`
+      .actual= `<a href='/faq#`, data.H, `'>`
+
+    #jsStrValue
+      .expected!= `<button onclick='alert(&#34;\u003cHello\u003e&#34;)'>`
+      .actual= "<button onclick='alert(", data.H, ")'>"
+
+    #jsNumericValue
+      .expected!= `<button onclick='alert( 42 )'>`
+      .actual= "<button onclick='alert(", data.N, ")'>"
+
+    #jsBoolValue
+      .expected!= `<button onclick='alert( true )'>`
+      .actual= "<button onclick='alert(", data.T, ")'>"
+
+    #jsNilValue
+      .expected!= `<button onclick='alert(typeof null )'>`
+      .actual= "<button onclick='alert(typeof ", data.Z, ")'>"
+
+    #jsObjValue
+      .expected!= `<button onclick='alert([&#34;\u003ca\u003e&#34;,&#34;\u003cb\u003e&#34;])'>`
+      .actual= "<button onclick='alert(", data.A, ")'>"
+
+    #jsObjValueScript
+      .expected!= `<script>alert(["\u003ca\u003e","\u003cb\u003e"])</script>`
+      .actual= "<script>alert(", data.A, `)</script>"`
+
+    #jsObjValueNotOverEscaped
+      .expected!= `<button onclick='alert([&#34;\u003ca\u003e&#34;,&#34;\u003cb\u003e&#34;])'>`
+      .actual= "<button onclick='alert(", data.A, ")'>"
+
+    #jsStr
+      .expected!= `<button onclick='alert(&quot;\x3cHello\x3e&quot;)'>`
+      .actual= "<button onclick='alert(&quot;", data.H, "&quot;)'>"
+
+    #badMarshaler
+      .expected!= `<button onclick='alert(1/ /* json: error calling MarshalJSON for type *template.badMarshaler: invalid character &#39;f&#39; looking for beginning of object key string */null in numbers)'>`
+      .actual= `<button onclick='alert(1/`, data.B, `in numbers)'>`
+
+    #jsMarshaler
+      .expected!= `<button onclick='alert({&#34;\u003cfoo\u003e&#34;:&#34;O&#39;Reilly&#34;})'>`
+      .actual= `<button onclick='alert(`, data.M, `)'>`
+
+    #jsStrNotUnderEscaped
+      .expected!= `<button onclick='alert(&#34;%3CCincinatti%3E&#34;)'>`
+      .actual= "<button onclick='alert(", data.C, ")'>"
+
+    #jsRe
+      .expected!= `<button onclick='alert(/foo\x2bbar/.test(""))'>`
+      .actual= `<button onclick='alert(/`, data.JsRe, `/.test(""))'>`
+
+    #jsReBlank
+      .expected!= `<script>alert(/(?:)/.test(""));</script>`
+      .actual= `<script>alert(/`, data.Blank, `/.test(""));</script>`
+
+    #styleBidiKeywordPassed
+      .expected!= `<p style="dir: ltr">`
+      .actual= `<p style="dir: `, data.Ltr, `">`
+
+    #styleBidiPropNamePassed
+      .expected!= `<p style="border-left: 0; border-right: 1in">`
+      .actual= `<p style="border-`, data.Left, `: 0; border-`, data.Right, `: 1in">`
+
+    #styleExpressionBlocked
+      .expected!= `<p style="width: ZgotmplZ">`
+      .actual= `<p style="width: {{"expression(alert(1337))"}}">`
+
+    #styleTagSelectorPassed
+      .expected!= `<style>p { color: pink }</style>`
+      .actual= `<style>`, data.Selector, ` { color: pink }</style>`
+
+    #styleObfuscatedExpressionBlocked
+      .expected!= `<p style="width: ZgotmplZ">`
+      .actual= `<p style="width: `, data.ObfuscatedExpression, `">`
+
+    #styleObfuscatedMozBindingBlocked
+      .expected!= `<p style="ZgotmplZ: ...">`
+      .actual= `<p style="`, data.ObfuscatedMozBinding, `: ...">`
+
+    #styleURLQueryEncoded
+      .expected!= `<p style="background: url(/img?name=O%27Reilly%20Animal%281%29%3c2%3e.png)">`
+      .actual= `<p style="background: url(/img?name=`, data.Img, `)">`
+
+    #styleURLBadProtocolBlocked
+      .expected!= `<a style="background: url('#ZgotmplZ')">`
+      .actual= `<a style="background: url('`, data.StyleURLBadProtocol, `')">`
+
+    #HtmlInText
+      .expected!= `&iexcl;<b class="foo">Hello</b>, <textarea>O'World</textarea>!`
+      .actual= data.W
+
+    #HtmlInAttribute
+      .expected!= `<div title="&iexcl;Hello, O&#39;World!">`
+      .actual= `<div title="`, data.W, `">`
+
+    #HtmlInScript
+      .expected!= `<button onclick="alert(&#34;&amp;iexcl;\u003cb class=\&#34;foo\&#34;\u003eHello\u003c/b\u003e, \u003ctextarea\u003eO&#39;World\u003c/textarea\u003e!&#34;)">`
+      .actual= `<button onclick="alert(`, data.W, `)">`
+
+    #HtmlInRCDATA
+      .expected!= `<textarea>&iexcl;&lt;b class=&#34;foo&#34;&gt;Hello&lt;/b&gt;, &lt;textarea&gt;O&#39;World&lt;/textarea&gt;!</textarea>`
+      .actual= `<textarea>`, data.W, `</textarea>`
+
+    #DynamicAttributeName
+      .expected!= `<input ZgotmplZ="doEvil()">`
+      .actual= `<input `, data.Event, `="`, data.Code, `">`

@@ -25,11 +25,29 @@ type TestDataType struct {
 	A, E                     []string
 	B, M                     json.Marshaler
 	N                        int
+	W                        string
 	Z                        *int
-	constant                 string
-	urlStartRel              string
-	urlStartAbsOk            string
-	protocolRelativeURLStart string
+	Constant                 string
+	UrlStartRel              string
+	UrlStartAbsOk            string
+	ProtocolRelativeURLStart string
+	PathRelativeURLStart     string
+	DangerousURLStart        string
+	NonHierURL               string
+	UrlPath                  string
+	JsRe                     string
+	Blank                    string
+	Ltr                      string
+	Left                     string
+	Right                    string
+	Expression               string
+	Selector                 string
+	ObfuscatedExpression     string
+	ObfuscatedMozBinding     string
+	Img                      string
+	StyleURLBadProtocol      string
+	Event                    string
+	Code                     string
 }
 
 func getTestData() *TestDataType {
@@ -44,14 +62,29 @@ func getTestData() *TestDataType {
 		N:                        42,
 		B:                        &badMarshaler{},
 		M:                        &goodMarshaler{},
+		W:                        `&iexcl;<b class="foo">Hello</b>, <textarea>O'World</textarea>!`,
 		Z:                        nil,
-		constant:                 "a<b",
-		urlStartRel:              "/foo/bar?a=b&c=d",
-		urlStartAbsOk:            "http://example.com/foo/bar?a=b&c=d",
-		protocolRelativeURLStart: "//example.com:8000/foo/bar?a=b&c=d",
-		pathRelativeURLStart:     "/javascript:80/foo/bar",
-		dangerousURLStart:        "javascript:alert(%22pwned%22)",
-		nonHierURL:               "mailto:Muhammed \"The Greatest\" Ali <m.ali@example.com>",
+		Constant:                 "a<b",
+		UrlStartRel:              "/foo/bar?a=b&c=d",
+		UrlStartAbsOk:            "http://example.com/foo/bar?a=b&c=d",
+		ProtocolRelativeURLStart: "//example.com:8000/foo/bar?a=b&c=d",
+		PathRelativeURLStart:     "/javascript:80/foo/bar",
+		DangerousURLStart:        "javascript:alert(%22pwned%22)",
+		NonHierURL:               "mailto:Muhammed \"The Greatest\" Ali <m.ali@example.com>",
+		UrlPath:                  "javascript:80",
+		JsRe:                     "foo+bar",
+		Blank:                    "",
+		Ltr:                      "ltr",
+		Left:                     "left",
+		Right:                    "right",
+		Expression:               "expression(alert(1337))",
+		Selector:                 "p",
+		ObfuscatedExpression:     "  e\\78preS\x00Sio/**/n(alert(1337))",
+		ObfuscatedMozBinding:     "  -mo\\7a-B\x00I/**/nding(alert(1337))",
+		Img:                      "O'Reilly Animal(1)<2>.png",
+		StyleURLBadProtocol:      "javascript:alert(1337)",
+		Event:                    "onchange",
+		Code:                     "doEvil()",
 	}
 }
 
