@@ -260,18 +260,24 @@ func Test_TwoTags(t *testing.T) {
 }
 
 func Test_Equals(t *testing.T) {
-	input := "= code_output"
+	input := "= \"static\", dynamic, `also static`"
 	l := lex("equals", input)
 
 	lexeme := l.nextItem()
 	testLexeme(lexeme, itemIndentation, "", t)
 
 	lexeme = l.nextItem()
-	testLexeme(lexeme, itemCodeOutput, "code_output", t)
+	testLexeme(lexeme, itemCodeOutputStatic, "static", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputDynamic, "dynamic", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputStatic, "also static", t)
 }
 
 func Test_TagEquals(t *testing.T) {
-	input := "%p= array[i]"
+	input := "%p= \"static\", dynamic"
 	l := lex("tag_code test", input)
 
 	lexeme := l.nextItem()
@@ -281,22 +287,61 @@ func Test_TagEquals(t *testing.T) {
 	testLexeme(lexeme, itemTag, "p", t)
 
 	lexeme = l.nextItem()
-	testLexeme(lexeme, itemCodeOutput, "array[i]", t)
+	testLexeme(lexeme, itemCodeOutputStatic, "static", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputDynamic, "dynamic", t)
 }
 
-func Test_Pipe(t *testing.T) {
-	input := "| raw_code_output"
-	l := lex("pipe", input)
+func Test_QuotedCodeOutput(t *testing.T) {
+	input := `= "abc \"abc\"", dynamic`
+	l := lex("tag_code test", input)
 
 	lexeme := l.nextItem()
 	testLexeme(lexeme, itemIndentation, "", t)
 
 	lexeme = l.nextItem()
-	testLexeme(lexeme, itemRawCodeOutput, "raw_code_output", t)
+	testLexeme(lexeme, itemCodeOutputStatic, `abc \"abc\"`, t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputDynamic, "dynamic", t)
 }
 
-func Test_PipeEquals(t *testing.T) {
-	input := "%p| array[i]"
+func Test_Raw(t *testing.T) {
+	input := "!= raw_code_output"
+	l := lex("raw", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputRaw, "raw_code_output", t)
+}
+
+func Test_RawAgain(t *testing.T) {
+	input := "!= fmt.Println(\"hi\")"
+	l := lex("raw again", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputRaw, "fmt.Println(\"hi\")", t)
+}
+
+func Test_IndentedRaw(t *testing.T) {
+	input := "\t!= raw_code_output"
+	l := lex("indented raw", input)
+
+	lexeme := l.nextItem()
+	testLexeme(lexeme, itemIndentation, "\t", t)
+
+	lexeme = l.nextItem()
+	testLexeme(lexeme, itemCodeOutputRaw, "raw_code_output", t)
+}
+
+func Test_RawEquals(t *testing.T) {
+	input := "%p!= array[i]"
 	l := lex("pipe_code test", input)
 
 	lexeme := l.nextItem()
@@ -306,7 +351,7 @@ func Test_PipeEquals(t *testing.T) {
 	testLexeme(lexeme, itemTag, "p", t)
 
 	lexeme = l.nextItem()
-	testLexeme(lexeme, itemRawCodeOutput, "array[i]", t)
+	testLexeme(lexeme, itemCodeOutputRaw, "array[i]", t)
 }
 
 func Test_Dash(t *testing.T) {

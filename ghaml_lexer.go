@@ -41,8 +41,9 @@ const (
 	itemAttributeValue
 	itemHtmlComment
 	itemEOF
-	itemCodeOutput
-	itemRawCodeOutput
+	itemCodeOutputStatic
+	itemCodeOutputDynamic
+	itemCodeOutputRaw
 	itemCodeExecution
 	itemDataType
 	itemImport
@@ -51,24 +52,25 @@ const (
 
 // pretty print items
 var itemName = map[lexItemType]string{
-	itemError:          "error",
-	itemNewline:        "newline",
-	itemIndentation:    "indentation",
-	itemDoctype:        "doctype",
-	itemText:           "text",
-	itemTag:            "tag",
-	itemId:             "id",
-	itemClass:          "class",
-	itemAttributeName:  "attribute name",
-	itemAttributeValue: "attribute value",
-	itemHtmlComment:    "Html comment",
-	itemEOF:            "EOF",
-	itemCodeOutput:     "code output",
-	itemRawCodeOutput:  "raw code output",
-	itemCodeExecution:  "code execution",
-	itemDataType:       "data type",
-	itemImport:         "import",
-	itemPackage:        "package",
+	itemError:             "error",
+	itemNewline:           "newline",
+	itemIndentation:       "indentation",
+	itemDoctype:           "doctype",
+	itemText:              "text",
+	itemTag:               "tag",
+	itemId:                "id",
+	itemClass:             "class",
+	itemAttributeName:     "attribute name",
+	itemAttributeValue:    "attribute value",
+	itemHtmlComment:       "Html comment",
+	itemEOF:               "EOF",
+	itemCodeOutputStatic:  "static code output",
+	itemCodeOutputDynamic: "dynamic code output",
+	itemCodeOutputRaw:     "raw code output",
+	itemCodeExecution:     "code execution",
+	itemDataType:          "data type",
+	itemImport:            "import",
+	itemPackage:           "package",
 }
 
 func (item lexItemType) String() string {
@@ -99,7 +101,7 @@ func lex(name, input string) *lexer {
 		name:    name,
 		input:   input,
 		state:   lexLineStart,
-		lexemes: make(chan lexeme, 2), // Two items of buffering is sufficient for all state functions
+		lexemes: make(chan lexeme, 100), // Two items of buffering is sufficient for all state functions
 	}
 	return l
 }
@@ -127,6 +129,20 @@ func (l *lexer) backup() {
 func (l *lexer) peek() (r rune) {
 	r = l.next()
 	l.backup()
+	return r
+}
+
+func (l *lexer) peekAhead(amnt int) (r rune) {
+	for i := 0; i < amnt; i++ {
+		r = l.next()
+		if r == eof {
+			l.errorf("peeked past end of content")
+			return eof
+		}
+	}
+	for i := 0; i < amnt; i++ {
+		l.backup()
+	}
 	return r
 }
 
@@ -224,7 +240,9 @@ func lexLineStart(l *lexer) stateFn {
 		l.emit(itemEOF)
 		return nil
 	case '!':
-		return lexDoctype
+		if l.peekAhead(2) == '!' {
+			return lexDoctype
+		}
 	case '@':
 		return lexMetadata
 	case '\r', '\n':
@@ -296,7 +314,7 @@ func lexContentStart(l *lexer) stateFn {
 		return lexHtmlComment
 	case '=':
 		return lexCodeOutput
-	case '|':
+	case '!':
 		return lexRawCodeOutput
 	case '-':
 		return lexCodeExecution
@@ -306,7 +324,7 @@ func lexContentStart(l *lexer) stateFn {
 
 // lexes the 'name' of something
 func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
-	specialChars := " #.%${}:'\"/?=|-"
+	specialChars := " #.%${}:'\"/?=!-"
 	l.accept(specialChars)
 	l.ignore()
 	l.acceptRunUntil(specialChars + "\n\r")
@@ -325,7 +343,7 @@ func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
 		return lexAttribute
 	case '=':
 		return lexCodeOutput
-	case '|':
+	case '!':
 		return lexRawCodeOutput
 	case '-':
 		return lexCodeExecution
@@ -417,24 +435,67 @@ func lexHtmlComment(l *lexer) stateFn {
 func lexCodeOutput(l *lexer) stateFn {
 	l.accept("=")
 	l.skipSpacesAndTabs()
-	l.ignore()
 Loop:
+	for {
+		switch l.peek() {
+		case eof, '\n', '\r':
+			break Loop
+		case ',':
+			l.next()
+			l.skipSpacesAndTabs()
+		case '"', '`':
+			lexCodeOutputStatic(l)
+		default:
+			lexCodeOutputDynamic(l)
+		}
+	}
+	return lexLineEnd
+}
+
+// Lexes static strings generated in a template.
+// E.g. = "This is static", not_static
+func lexCodeOutputStatic(l *lexer) {
+	l.accept("\"`")
+	l.ignore()
 	for {
 		switch l.next() {
 		case eof, '\n', '\r':
-			break Loop
+			l.errorf("Unterminated string")
+			return
+		case '\\':
+			if l.peek() == '"' { // escaped quote - not the end of the string
+				l.next()
+			}
+		case '"', '`':
+			l.backup()
+			l.emit(itemCodeOutputStatic)
+			l.next()
+			l.ignore()
+			return
 		}
 	}
-	l.backup()
-	l.emit(itemCodeOutput)
-	return lexLineEnd
+}
+
+//Lexes dynamic (user-generated) output
+func lexCodeOutputDynamic(l *lexer) {
+	for {
+		switch l.next() {
+		case eof, '\n', '\r':
+			l.backup()
+			l.emit(itemCodeOutputDynamic)
+			return
+		case ',':
+			l.backup()
+			l.emit(itemCodeOutputDynamic)
+			return
+		}
+	}
 }
 
 // lexes markup for output to be printed without XSS safety
 func lexRawCodeOutput(l *lexer) stateFn {
-	l.accept("|")
+	l.acceptRun("!=")
 	l.skipSpacesAndTabs()
-	l.ignore()
 Loop:
 	for {
 		switch l.next() {
@@ -443,7 +504,7 @@ Loop:
 		}
 	}
 	l.backup()
-	l.emit(itemRawCodeOutput)
+	l.emit(itemCodeOutputRaw)
 	return lexLineEnd
 }
 
@@ -451,7 +512,6 @@ Loop:
 func lexCodeExecution(l *lexer) stateFn {
 	l.accept("-")
 	l.skipSpacesAndTabs()
-	l.ignore()
 Loop:
 	for {
 		switch l.next() {
