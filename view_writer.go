@@ -8,10 +8,11 @@ import (
 )
 
 type ViewWriter struct {
-	context         *ParseContext
-	rootNode        *Node
-	writer          io.Writer
-	destinationName string
+	context           *ParseContext
+	rootNode          *Node
+	writer            io.Writer
+	destinationName   string
+	writingCodeOutput bool
 }
 
 func NewViewWriter(wr io.Writer, context *ParseContext, rootNode *Node, writerName string) *ViewWriter {
@@ -28,7 +29,7 @@ func NewViewWriter(wr io.Writer, context *ParseContext, rootNode *Node, writerNa
 func (w *ViewWriter) WriteView() {
 	src := formatting.NewIndentingWriter(w.writer)
 
-	htmlArr, srcOut, escapedHtml := w.processNodes()
+	htmlArr, srcOut, patterns := w.processNodes()
 
 	src.Printf("package %s\n", w.context.pkg)
 	src.Println("")
@@ -38,24 +39,30 @@ func (w *ViewWriter) WriteView() {
 	src.Println("import (")
 	src.IncrIndent()
 	src.Println("\"fmt\"")
+	src.Println("\"html/template\"")
 	src.Println("\"net/http\"")
-	if escapedHtml {
-		src.Println("\"text/template\"")
-	}
 	for _, imp := range w.context.imports {
 		src.Printf("%q\n", imp)
 	}
 	src.DecrIndent()
 	src.Println(")")
 	src.Println("")
-	src.Printf("func New%sWriter(data %s) (*%sWriter) {\n", w.destinationName, w.context.dataType, w.destinationName)
+	src.Printf("func New%sWriter() (*%sWriter) {\n", w.destinationName, w.destinationName)
 	src.IncrIndent()
-	src.Printf("wr := &%sWriter {\n", w.destinationName)
+	src.Printf("wr := &%sWriter{}\n", w.destinationName)
+	src.Println("")
+	src.Printf("for idx, pattern := range %sTemplatePatterns {\n", w.destinationName)
 	src.IncrIndent()
-	src.Printf("data: data,\n")
+	src.Printf("tmpl, err := template.New(\"%sTemplates\" + string(idx)).Parse(pattern)\n", w.destinationName)
+	src.Println("if err != nil {")
+	src.IncrIndent()
+	src.Println("fmt.Errorf(\"Could not parse template: %d\", idx)")
+	src.Println("panic(err)")
 	src.DecrIndent()
 	src.Println("}")
-	src.Println("")
+	src.Printf("%sTemplates = append(%sTemplates, tmpl)\n", w.destinationName, w.destinationName)
+	src.DecrIndent()
+	src.Println("}")
 	src.Println("return wr")
 	src.DecrIndent()
 	src.Println("}")
@@ -66,9 +73,21 @@ func (w *ViewWriter) WriteView() {
 	src.DecrIndent()
 	src.Println("}")
 	src.Println("")
+	src.Printf("func (wr *%sWriter) SetData(data %s) {\n", w.destinationName, w.context.dataType)
+	src.IncrIndent()
+	src.Println("wr.data = data")
+	src.DecrIndent()
+	src.Println("}")
+	src.Println("")
 	src.Printf("var %sHtml = [...]string{\n", w.destinationName)
 	src.Println(htmlArr)
 	src.Println("}")
+	src.Println("")
+	src.Printf("var %sTemplatePatterns = []string{\n", w.destinationName)
+	src.Print(patterns)
+	src.Println("}")
+	src.Println("")
+	src.Printf("var %sTemplates = make([]*template.Template, 0, len(%sTemplatePatterns))\n", w.destinationName, w.destinationName)
 	src.Println("")
 	src.Printf("func (wr %sWriter) Execute(w http.ResponseWriter, r *http.Request) {\n", w.destinationName)
 	src.IncrIndent()
@@ -92,11 +111,13 @@ func (w *ViewWriter) WriteView() {
 //	fmt.Fprint(w, HtmlArray[0])
 //	fmt.Fprint(w, "Custom string: ", data)
 //  fmt.Fprint(w, HtmlArray[1]) ...
-func (w *ViewWriter) processNodes() (htmlArray string, src string, escapedHtml bool) {
+func (w *ViewWriter) processNodes() (htmlArray string, src string, patterns string) {
 	htmlBuffer := bytes.NewBuffer(make([]byte, 0))
 	htmlWriter := formatting.NewIndentingWriter(htmlBuffer)
 	srcBuffer := bytes.NewBuffer(make([]byte, 0))
 	srcWriter := formatting.NewIndentingWriter(srcBuffer)
+	patternBuffer := bytes.NewBuffer(make([]byte, 0))
+	patternWriter := formatting.NewIndentingWriter(patternBuffer)
 
 	// initialise opening quote for htlmArray
 	htmlWriter.Print("`")
@@ -104,37 +125,60 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string, escapedHtml b
 	// initialise starting indent for src
 	srcWriter.IncrIndent()
 
-	currentHtmlIndex := 0
-	esc := false
+	// initialise starting indent and openning quote
+	patternWriter.IncrIndent()
+
+	htmlIndex := 0
+	patternIndex := 0
 	for n := w.rootNode.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex, esc = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, currentHtmlIndex)
-		escapedHtml = escapedHtml || esc
+		htmlIndex, _ = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, patternWriter, htmlIndex, patternIndex)
 	}
 
 	// close quote for html Array
 	htmlWriter.Print("`,")
 
+	// Ensure final html is written
+	srcWriter.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, htmlIndex)
+
 	htmlArray = htmlBuffer.String()
 	src = srcBuffer.String()
+	patterns = patternBuffer.String()
 	return
 }
+
+type CodeOutputType int
+
+const (
+	Static CodeOutputType = iota
+	Dynamic
+	Raw
+	Execution
+)
 
 // Recursive function to write parsed HAML Nodes
 // We have to return a bool indicating if we have escaped any HTML (XSS protection)
 // so that we know if we need to include the templating library for that function
-func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) (htmlIndex int, escapedHtml bool) {
-	escapedHtml = false
-	if nd.name == "code_output" {
-		escapedHtml = true
-		htmlIndex = w.writeCodeOutput(nd, haml, src, currentHtmlIndex, true)
-		return
-	} else if nd.name == "raw_code_output" {
-		htmlIndex = w.writeCodeOutput(nd, haml, src, currentHtmlIndex, false)
-		return
+func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int) (htmlIndex, patternIndex int) {
+
+	htmlIndex = currentHtmlIndex
+	patternIndex = currentPatternIndex
+
+	if nd.name == "code_output_static" {
+		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Static)
+	} else if nd.name == "code_output_dynamic" {
+		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Dynamic)
+	} else if nd.name == "code_output_raw" {
+		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Raw)
 	} else if nd.name == "code_execution" {
-		htmlIndex = w.writeCodeExecution(nd, haml, src, currentHtmlIndex)
-		return
+		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Execution)
 	}
+
+	if w.writingCodeOutput {
+		// we've finished writing code output and we're back to haml
+		// so close off our pattern string
+		pattern.Println("`,")
+	}
+	w.writingCodeOutput = false
 
 	haml.Printf("<%s", nd.name)
 	if nd.id != nil {
@@ -173,10 +217,8 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 		w.writeLongText(nd.text, haml)
 	}
 
-	esc := false
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex, esc = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
-		escapedHtml = escapedHtml || esc
+		htmlIndex, patternIndex = w.writeNode(n.Value.(*Node), haml, src, pattern, htmlIndex, patternIndex)
 	}
 
 	haml.DecrIndent()
@@ -227,62 +269,76 @@ func (w *ViewWriter) writeAttribute(attribute *nameValueStr, haml *formatting.In
 	haml.Printf(" %s=\"%s\"", attribute.name, attribute.value)
 }
 
-func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int, escapeHtml bool) int {
-	// end most recent haml output
-	haml.Println("`,")
-	// start next haml output (which will follow this code output
-	haml.Println("`")
+func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int, nodeType CodeOutputType) (htmlIndex, patternIndex int) {
 
-	// All call to write html from array 
-	src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
-	currentHtmlIndex++
+	htmlIndex = currentHtmlIndex
+	patternIndex = currentPatternIndex
+
+	if !w.writingCodeOutput {
+		// First code output node - close off haml node output:
+
+		// end most recent haml output
+		haml.Println("`,")
+		// start next haml output (which will follow this code output
+		haml.Println("`")
+
+		// Add call to write html from array 
+		src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
+
+		if nodeType == Static || nodeType == Dynamic {
+			src.Printf("%sTemplates[%d].Execute(w, data)\n", w.destinationName, currentPatternIndex)
+			// start a new pattern string
+			pattern.Print("`")
+
+			w.writingCodeOutput = true
+			patternIndex++
+		}
+
+		htmlIndex++
+	}
+
+	// These stop writing patterns, so we need to close off pattern strings
+	if w.writingCodeOutput && (nodeType == Raw || nodeType == Execution) {
+		pattern.Println("`,")
+		w.writingCodeOutput = false
+	}
 
 	// add call to print output
-	if escapeHtml {
-		src.Printf("fmt.Fprint(w, template.HTMLEscaper(%s))\n", nd.text)
-	} else {
-		src.Printf("fmt.Fprint(w, %s)\n", nd.text)
+	switch nodeType {
+	case Static:
+		pattern.Print(nd.text)
+	case Dynamic:
+		// change data.Val into .Val
+		// and data into .
+		p := strings.Replace(nd.text, "data.", ".", -1)
+		p = strings.Replace(p, "data", ".", -1)
+		pattern.Printf("{{%s}}", p)
+	case Raw:
+		src.Printf("fmt.Fprintf(w, %s)\n", nd.text)
+	case Execution:
+		// attempt to keep formatting across user code. 
+		// Here we're checking to see if this is the end of a block statement
+		// if so, we need to decrease indent
+		first := getFirstChar(nd.text)
+		if first == '}' {
+			src.DecrIndent()
+		}
+
+		// add user's code
+		src.Printf("%s\n", nd.text)
+
+		// If user code ends in {, incr indent as they started a block statement
+		last := getLastChar(nd.text)
+		if last == '{' {
+			src.IncrIndent()
+		}
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex, _ = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
+		htmlIndex, patternIndex = w.writeNode(n.Value.(*Node), haml, src, pattern, htmlIndex, patternIndex)
 	}
 
-	return currentHtmlIndex
-}
-
-func (w *ViewWriter) writeCodeExecution(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, currentHtmlIndex int) int {
-	// end most recent haml output
-	haml.Println("`,")
-	// start next haml output (which will follow this code output
-	haml.Println("`")
-
-	// All call to write html from array 
-	src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
-	currentHtmlIndex++
-
-	// attempt to keep formatting across user code. 
-	// Here we're checking to see if this is the end of a block statement
-	// if so, we need to decrease indent
-	first := getFirstChar(nd.text)
-	if first == '}' {
-		src.DecrIndent()
-	}
-
-	// add user's code
-	src.Printf("%s\n", nd.text)
-
-	// If user code ends in {, incr indent as they started a block statement
-	last := getLastChar(nd.text)
-	if last == '{' {
-		src.IncrIndent()
-	}
-
-	for n := nd.children.Front(); n != nil; n = n.Next() {
-		currentHtmlIndex, _ = w.writeNode(n.Value.(*Node), haml, src, currentHtmlIndex)
-	}
-
-	return currentHtmlIndex
+	return
 }
 
 func getFirstChar(s string) byte {

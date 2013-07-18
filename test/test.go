@@ -1,24 +1,34 @@
-package test
+package main
 
 // THIS IS A GENERATED FILE, EDITS WILL BE OVERWRITTEN
 // EDIT THE .haml FILE INSTEAD
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
-	"text/template"
 )
 
-func NewTestWriter(data string) (*TestWriter) {
-	wr := &TestWriter {
-		data: data,
-	}
+func NewTestWriter() (*TestWriter) {
+	wr := &TestWriter{}
 	
+	for idx, pattern := range TestTemplatePatterns {
+		tmpl, err := template.New("TestTemplates" + string(idx)).Parse(pattern)
+		if err != nil {
+			fmt.Errorf("Could not parse template: %d", idx)
+			panic(err)
+		}
+		TestTemplates = append(TestTemplates, tmpl)
+	}
 	return wr
 }
 
 type TestWriter struct {
 	data string
+}
+
+func (wr *TestWriter) SetData(data string) {
+	wr.data = data
 }
 
 var TestHtml = [...]string{
@@ -30,6 +40,7 @@ var TestHtml = [...]string{
 		</title>
 	</head>
 	<body>
+		 | "Unescaped (and dangerous) output: <i>", data, "</i>"
 		<h1>
 			`,
 			`
@@ -44,8 +55,6 @@ var TestHtml = [...]string{
 			 The .operator (think of the '.' css selector') lets you create a div with the given class. For example
 			this text will be wrapped in a div that looks like
 		</div>
-		`,
-		`
 		<div></div>
 		<ul type="disc">
 			`,
@@ -62,21 +71,27 @@ var TestHtml = [...]string{
 `,
 }
 
+var TestTemplatePatterns = []string{
+	`Hello, {{.}}`,
+	`Hello, {{.}}`,
+}
+
+var TestTemplates = make([]*template.Template, 0, len(TestTemplatePatterns))
+
 func (wr TestWriter) Execute(w http.ResponseWriter, r *http.Request) {
 	wr.ExecuteData(w, r, wr.data)
 }
 
 func (wr *TestWriter) ExecuteData(w http.ResponseWriter, r *http.Request, data string) {
 	fmt.Fprint(w, TestHtml[0])
-	fmt.Fprint(w, template.HTMLEscaper("Hello, ", data))
-	fmt.Fprint(w, TestHtml[0])
-	fmt.Fprint(w, template.HTMLEscaper("Hello, ", data))
-	fmt.Fprint(w, TestHtml[0])
-	fmt.Fprint(w, "Unescaped (and dangerous) output: <i>", data, "</i>")
-	fmt.Fprint(w, TestHtml[0])
+	TestTemplates[0].Execute(w, data)
+	fmt.Fprint(w, TestHtml[1])
+	TestTemplates[1].Execute(w, data)
+	fmt.Fprint(w, TestHtml[2])
 	for i := 0; i < 10; i++ {
-		fmt.Fprint(w, TestHtml[1])
-		fmt.Fprint(w, "Item: ", i)
-		fmt.Fprint(w, TestHtml[0])
+		fmt.Fprint(w, TestHtml[3])
+		fmt.Fprintf(w, "Item: ", i)
+		fmt.Fprint(w, TestHtml[4])
 	}
+	fmt.Fprint(w, TestHtml[5])
 }

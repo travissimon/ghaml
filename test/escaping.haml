@@ -1,0 +1,47 @@
+@data_type: *TestDataType
+
+%html
+  %body
+    
+    #if
+      .expected!= "Hello, &lt;Cincinatti&gt;!"
+
+      .actual
+        - if data.T {
+          = "Hello,"
+        - }
+        = data.C, "!"
+
+    #else
+      .exepected!= "&lt;Goodbye&gt;"
+      
+      .actual
+        - if data.F {
+          = data.H
+        - } else {
+          = data.G
+        - }
+
+    #rangeBody
+      .expected!= "&lt;a&gt;&lt;b&gt;"
+
+      .actual
+        - for d := range data.A {
+          = d
+        - }
+
+    #constant
+      .expected!= `<a href="/search?q=%27a%3cb%27">`
+
+      .actual= `<a href="/search?q=`, data.constant, `">`
+
+    #multipleAttrs
+      .expected!= "<a b=1 c=&lt;Hello&gt;>"
+
+      .actual= "<a b=1 c=", data.H ">"
+
+    #urlStartRel
+      .expected!= `<a href='{{"/foo/bar?a=b&c=d"}}'>`
+
+      .actual= `<a href='`, data.urlStartRel, `'>`
+        
