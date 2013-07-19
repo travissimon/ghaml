@@ -301,7 +301,29 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 		src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
 
 		if nodeType == Static || nodeType == Dynamic {
-			src.Printf("err = %sTemplates[%d].Execute(w, data)\n", w.destinationName, currentPatternIndex)
+			// Add calls to execute template. However, we need to know which
+			// object to inject into template. Usually this will be 'data', but
+			// can be something else inside a loop, for example, so we take the
+			// object from the first dynamic element
+			objectToInject := "data"
+			if nodeType == Dynamic {
+				objectToInject = getObjectName(nd.text)
+			} else {
+			LookaheadLoop:
+				for n := nd.children.Front(); n != nil; n = n.Next() {
+					node := n.Value.(*Node)
+					switch node.name {
+					case "code_output_dynamic":
+						objectToInject = getObjectName(node.text)
+						break LookaheadLoop
+					case "code_output_static":
+						continue
+					default:
+						break LookaheadLoop
+					}
+				}
+			}
+			src.Printf("err = %sTemplates[%d].Execute(w, %s)\n", w.destinationName, currentPatternIndex, objectToInject)
 			src.Printf("handle%sError(err)\n", w.destinationName)
 			// start a new pattern string
 			pattern.Print("`")
@@ -324,11 +346,13 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	case Static:
 		pattern.Print(nd.text)
 	case Dynamic:
-		// change data.Val into .Val
-		// and data into .
-		p := strings.Replace(nd.text, "data.", ".", -1)
-		p = strings.Replace(p, "data", ".", -1)
-		pattern.Printf("{{%s}}", p)
+		// print the path to the desired object for the template pattern
+		patternStr := "."
+		index := strings.Index(nd.text, ".")
+		if index > 0 {
+			patternStr = nd.text[index:]
+		}
+		pattern.Printf("{{%s}}", patternStr)
 	case Raw:
 		src.Printf("fmt.Fprint(w, %s)\n", nd.text)
 	case Execution:
@@ -365,4 +389,24 @@ func getFirstChar(s string) byte {
 func getLastChar(s string) byte {
 	trimmed := strings.TrimRight(s, "\t ")
 	return trimmed[len(trimmed)-1]
+}
+
+// returns the name of the object to inject
+// into a template. Usually this is just 'data'
+func getObjectName(s string) string {
+	index := strings.Index(s, ".")
+	if index < 0 {
+		return s
+	}
+	return s[0:index]
+}
+
+// returns the path to the property to inject
+// into a template.
+func getObjectPath(s string) string {
+	index := strings.Index(s, ".")
+	if index < 0 {
+		return "."
+	}
+	return s[index:]
 }

@@ -23,13 +23,13 @@
         - }
 
     
-    - //#rangeBody
-      - //.expected!= "&lt;a&gt;&lt;b&gt;"
+    #rangeBody
+      .expected!= "&lt;a&gt;&lt;b&gt;"
 
-      - //.actual
-        - // for d := range data.A {
-          - //= d
-        - // }
+      .actual
+        - for _, d := range data.A {
+          = d
+        - }
 
     #constant
       .expected!= `<a href="/search?q=%27a%3cb%27">`
