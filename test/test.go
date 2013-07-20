@@ -27,8 +27,8 @@ type TestWriter struct {
 	data string
 }
 
-func (wr *TestWriter) SetData(data string) {
-	wr.data = data
+func (wr *TestWriter) SetData(data interface{}) {
+	wr.data = data.(string)
 }
 
 var TestHtml = [...]string{

@@ -27,8 +27,8 @@ type EscapingWriter struct {
 	data *TestDataType
 }
 
-func (wr *EscapingWriter) SetData(data *TestDataType) {
-	wr.data = data
+func (wr *EscapingWriter) SetData(data interface{}) {
+	wr.data = data.(*TestDataType)
 }
 
 var EscapingHtml = [...]string{
