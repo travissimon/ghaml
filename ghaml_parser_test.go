@@ -212,7 +212,13 @@ func Test_Metadata(t *testing.T) {
 
 	parser := NewParser(hamlStr, hamlStr)
 	parser.Parse()
+}
 
+func Test_NonChildTextOnlyLines(t *testing.T) {
+	hamlStr := ".a\n text 1\n %p para text\n text 2"
+	expStr := "div class='a' ( text 1)\n\tp (para text)\n\t (text 2)"
+
+	parseAndCompare(hamlStr, expStr, t)
 }
 
 func dumpParser(parser *GhamlParser) {

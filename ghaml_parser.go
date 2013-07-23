@@ -62,7 +62,7 @@ type nameValueStr struct {
 type Node struct {
 	name        string
 	text        string
-	id          *nameValueStr // treat id and class differently so that we can 
+	id          *nameValueStr // treat id and class differently so that we can
 	class       *nameValueStr // write them to the front of the attr list
 	attributes  *list.List
 	children    *list.List
@@ -156,6 +156,8 @@ Loop:
 			indentation := lexeme.val
 			nextLexeme := g.lexer.nextItem()
 			g.parseLineStart(indentation, nextLexeme)
+		case itemSelfClosingTagIdentifier:
+			g.getCurrentNode().selfClosing = true
 		case itemText:
 			g.getCurrentNode().text += lexeme.val
 		case itemId:
@@ -218,7 +220,8 @@ func (g *GhamlParser) parseLineStart(indentation string, firstItem lexeme) {
 		g.tags.pop()
 	}
 
-	if firstItem.typ == itemText {
+	if firstItem.typ == itemText && g.getCurrentNode().children.Len() == 0 {
+		// text continuing from a previous line
 		g.getCurrentNode().text += " " + firstItem.val
 		return
 	}
@@ -228,6 +231,10 @@ func (g *GhamlParser) parseLineStart(indentation string, firstItem lexeme) {
 	switch firstItem.typ {
 	case itemTag:
 		firstNode = buildNode(firstItem.val)
+	case itemText:
+		// text on a new line, but not a continuation
+		firstNode = buildNode("")
+		firstNode.text = firstItem.val
 	case itemCodeOutputStatic:
 		firstNode = buildNode("code_output_static")
 		firstNode.text = firstItem.val

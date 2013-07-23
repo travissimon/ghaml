@@ -11,7 +11,7 @@ import (
 // http://blog.golang.org/2011/09/two-go-talks-lexical-scanning-in-go-and.html
 // http://golang.org/src/pkg/text/template/parse/lex.go
 
-// lexeme is 
+// lexeme is
 type lexeme struct {
 	typ lexItemType
 	val string
@@ -35,6 +35,7 @@ const (
 	itemDoctype
 	itemText
 	itemTag
+	itemSelfClosingTagIdentifier
 	itemId
 	itemClass
 	itemAttributeName
@@ -52,12 +53,13 @@ const (
 
 // pretty print items
 var itemName = map[lexItemType]string{
-	itemError:             "error",
-	itemNewline:           "newline",
-	itemIndentation:       "indentation",
-	itemDoctype:           "doctype",
-	itemText:              "text",
-	itemTag:               "tag",
+	itemError:       "error",
+	itemNewline:     "newline",
+	itemIndentation: "indentation",
+	itemDoctype:     "doctype",
+	itemText:        "text",
+	itemTag:         "tag",
+	itemSelfClosingTagIdentifier: "tag is self closing",
 	itemId:                "id",
 	itemClass:             "class",
 	itemAttributeName:     "attribute name",
@@ -330,11 +332,17 @@ func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
 	l.acceptRunUntil(specialChars + "\n\r")
 	l.emit(lexType)
 
+	return lexIdentifierEnd
+}
+
+func lexIdentifierEnd(l *lexer) stateFn {
 	switch l.peek() {
 	case eof, '\r', '\n':
 		return lexLineEnd
 	case ' ', '\t':
 		return lexText
+	case '/':
+		return lexSelfClosingIdentifier
 	case '#':
 		return lexId
 	case '.':
@@ -350,6 +358,13 @@ func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
 	default:
 	}
 	return lexLineEnd
+}
+
+func lexSelfClosingIdentifier(l *lexer) stateFn {
+	l.accept("/")
+	l.ignore()
+	l.emit(itemSelfClosingTagIdentifier)
+	return lexIdentifierEnd
 }
 
 // lexes a tag declaration (e.g. %tag)
@@ -410,7 +425,7 @@ func lexAttribute(l *lexer) stateFn {
 	case ',':
 		return lexAttribute
 	case '}':
-		return lexText
+		return lexIdentifierEnd
 	}
 	return l.errorf("Expected end of attribute, received %q", l.peek())
 }

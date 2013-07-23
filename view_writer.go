@@ -195,31 +195,37 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 	}
 	w.writingCodeOutput = false
 
-	haml.Printf("<%s", nd.name)
-	if nd.id != nil {
-		w.writeAttribute(nd.id, haml)
-	}
-	if nd.class != nil {
-		w.writeAttribute(nd.class, haml)
-	}
+	if nd.name != "" {
+		haml.Printf("<%s", nd.name)
+		if nd.id != nil {
+			w.writeAttribute(nd.id, haml)
+		}
+		if nd.class != nil {
+			w.writeAttribute(nd.class, haml)
+		}
 
-	for attrEl := nd.attributes.Front(); attrEl != nil; attrEl = attrEl.Next() {
-		attr := attrEl.Value.(*nameValueStr)
-		w.writeAttribute(attr, haml)
-	}
+		for attrEl := nd.attributes.Front(); attrEl != nil; attrEl = attrEl.Next() {
+			attr := attrEl.Value.(*nameValueStr)
+			w.writeAttribute(attr, haml)
+		}
 
-	if nd.selfClosing {
-		haml.Println(" />`)")
-		return
-	} else {
-		haml.Print(">")
+		if nd.selfClosing {
+			haml.Println(" />")
+			return
+		} else {
+			haml.Print(">")
+		}
 	}
 
 	// Outputting text.
 
 	// If tag only contains short text, add it on same line
 	if w.canChildContentFitOnOneLine(nd) {
-		haml.Printf("%s</%s>\n", nd.text, nd.name)
+		if nd.name == "" {
+			haml.Printf("%s\n", nd.text)
+		} else {
+			haml.Printf("%s</%s>\n", nd.text, nd.name)
+		}
 		return
 	}
 
@@ -237,7 +243,9 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 	}
 
 	haml.DecrIndent()
-	haml.Printf("</%s>\n", nd.name)
+	if nd.name != "" {
+		haml.Printf("</%s>\n", nd.name)
+	}
 
 	return
 }
@@ -297,7 +305,7 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 		// start next haml output (which will follow this code output
 		haml.Println("`")
 
-		// Add call to write html from array 
+		// Add call to write html from array
 		src.Printf("fmt.Fprint(w, %sHtml[%d])\n", w.destinationName, currentHtmlIndex)
 
 		if nodeType == Static || nodeType == Dynamic {
@@ -356,7 +364,7 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	case Raw:
 		src.Printf("fmt.Fprint(w, %s)\n", nd.text)
 	case Execution:
-		// attempt to keep formatting across user code. 
+		// attempt to keep formatting across user code.
 		// Here we're checking to see if this is the end of a block statement
 		// if so, we need to decrease indent
 		first := getFirstChar(nd.text)
