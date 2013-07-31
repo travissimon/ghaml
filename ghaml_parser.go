@@ -92,7 +92,7 @@ func (n *Node) addClass(class string) {
 	}
 
 	if len(n.class.value) > 0 {
-		n.class.value += ", "
+		n.class.value += " "
 	}
 
 	n.class.value += class
