@@ -101,6 +101,13 @@ func (w *ViewWriter) WriteView() {
 	// This is calls to htmlArray and code generated Prints
 	src.Print(srcOut)
 
+	src.IncrIndent()
+	src.Printf("if err != nil {")
+	src.IncrIndent()
+	src.Printf("err = nil")
+	src.DecrIndent()
+	src.Printf("}")
+	src.DecrIndent()
 	src.Println("}")
 	src.Println("")
 	src.Printf("func handle%sError(err error) {\n", w.destinationName)
@@ -210,7 +217,11 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 		}
 
 		if nd.selfClosing {
-			haml.Println(" />")
+			haml.Print(" />")
+			if nd.text != "" {
+				haml.Printf(" %s", nd.text)
+			}
+			haml.Println("")
 			return
 		} else {
 			haml.Print(">")
