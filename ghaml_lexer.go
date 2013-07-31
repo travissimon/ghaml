@@ -326,7 +326,7 @@ func lexContentStart(l *lexer) stateFn {
 
 // lexes the 'name' of something
 func (l *lexer) lexIdentifier(lexType lexItemType) stateFn {
-	specialChars := " #.%${}:'\"/?=!-"
+	specialChars := " #.%${}:'\"/?=!"
 	l.accept(specialChars)
 	l.ignore()
 	l.acceptRunUntil(specialChars + "\n\r")
@@ -404,12 +404,12 @@ func lexAttribute(l *lexer) stateFn {
 	l.skipSpacesAndTabs()
 	l.accept("\"")
 	l.ignore()
-	l.acceptRunUntil("\":")
+	l.acceptRunUntil("\":=")
 	l.emit(itemAttributeName)
 	l.accept("\"")
 	l.skipSpacesAndTabs()
-	if !l.accept(":") {
-		return l.errorf("Unexpected rune %q. Expecting ':'")
+	if !l.accept(":=") {
+		return l.errorf("Unexpected rune %q. Expecting ':' or '='")
 	}
 	l.skipSpacesAndTabs()
 	l.accept("\"")
