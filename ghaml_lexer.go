@@ -209,7 +209,10 @@ func (l *lexer) lineNumber() int {
 // error returns an error token and terminates the scan by passing
 // back a nil pointer that will be the next state, terminating l.nextItem.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	l.lexemes <- lexeme{itemError, fmt.Sprintf(format, args...)}
+	format = "%s, line: %d - " + format
+	newArgs := []interface{}{l.name, l.lineNumber()}
+	newArgs = append(newArgs, args)
+	l.lexemes <- lexeme{itemError, fmt.Sprintf(format, newArgs...)}
 	return nil
 }
 
@@ -226,7 +229,7 @@ func (l *lexer) nextItem() lexeme {
 		select {
 		case lexeme := <-l.lexemes:
 			if lexeme.typ == itemError {
-				panic("ERROR: " + lexeme.val + "\n")
+				panic(lexeme.val + "\n")
 			}
 			return lexeme
 		default:
