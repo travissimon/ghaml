@@ -111,6 +111,13 @@ func Test_TagWithMultipleClasses(t *testing.T) {
 	parseAndCompare(hamlStr, expStr, t)
 }
 
+func Test_TagWithHyphenatedClasses(t *testing.T) {
+	hamlStr := "%tag1.class-1.class-2"
+	expStr := "tag1 class='class-1 class-2'"
+
+	parseAndCompare(hamlStr, expStr, t)
+}
+
 func Test_ParserImplicitDiv(t *testing.T) {
 	hamlStr := "#testId\n.testClass"
 	expStr := "div id='testId'\ndiv class='testClass'"
@@ -120,7 +127,7 @@ func Test_ParserImplicitDiv(t *testing.T) {
 
 func Test_ImplicitWithMultipleClasses(t *testing.T) {
 	hamlStr := ".cl1.cl2#id1 Some text"
-	expStr := "div id='id1' class='cl1, cl2' (Some text)"
+	expStr := "div id='id1' class='cl1 cl2' (Some text)"
 
 	parseAndCompare(hamlStr, expStr, t)
 }
