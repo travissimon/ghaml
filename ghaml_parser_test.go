@@ -106,7 +106,7 @@ func Test_ParserTagWithClassAndId(t *testing.T) {
 
 func Test_TagWithMultipleClasses(t *testing.T) {
 	hamlStr := "%tag1.class1.class2"
-	expStr := "tag1 class='class1, class2'"
+	expStr := "tag1 class='class1 class2'"
 
 	parseAndCompare(hamlStr, expStr, t)
 }
