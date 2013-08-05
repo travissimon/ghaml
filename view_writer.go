@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"container/list"
 	"github.com/travissimon/formatting"
 	"io"
 	"strings"
@@ -148,7 +149,7 @@ func (w *ViewWriter) processNodes() (htmlArray string, src string, patterns stri
 	htmlIndex := 0
 	patternIndex := 0
 	for n := w.rootNode.children.Front(); n != nil; n = n.Next() {
-		htmlIndex, _ = w.writeNode(n.Value.(*Node), htmlWriter, srcWriter, patternWriter, htmlIndex, patternIndex)
+		htmlIndex, _ = w.writeNode(n, htmlWriter, srcWriter, patternWriter, htmlIndex, patternIndex)
 	}
 
 	// close quote for html Array
@@ -180,19 +181,20 @@ const (
 // Recursive function to write parsed HAML Nodes
 // We have to return a bool indicating if we have escaped any HTML (XSS protection)
 // so that we know if we need to include the templating library for that function
-func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int) (htmlIndex, patternIndex int) {
+func (w *ViewWriter) writeNode(el *list.Element, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int) (htmlIndex, patternIndex int) {
+	nd := el.Value.(*Node)
 
 	htmlIndex = currentHtmlIndex
 	patternIndex = currentPatternIndex
 
 	if nd.name == "code_output_static" {
-		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Static)
+		return w.writeCodeOutput(el, haml, src, pattern, htmlIndex, patternIndex, Static)
 	} else if nd.name == "code_output_dynamic" {
-		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Dynamic)
+		return w.writeCodeOutput(el, haml, src, pattern, htmlIndex, patternIndex, Dynamic)
 	} else if nd.name == "code_output_raw" {
-		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Raw)
+		return w.writeCodeOutput(el, haml, src, pattern, htmlIndex, patternIndex, Raw)
 	} else if nd.name == "code_execution" {
-		return w.writeCodeOutput(nd, haml, src, pattern, htmlIndex, patternIndex, Execution)
+		return w.writeCodeOutput(el, haml, src, pattern, htmlIndex, patternIndex, Execution)
 	}
 
 	if w.writingCodeOutput {
@@ -250,7 +252,7 @@ func (w *ViewWriter) writeNode(nd *Node, haml *formatting.IndentingWriter, src *
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		htmlIndex, patternIndex = w.writeNode(n.Value.(*Node), haml, src, pattern, htmlIndex, patternIndex)
+		htmlIndex, patternIndex = w.writeNode(n, haml, src, pattern, htmlIndex, patternIndex)
 	}
 
 	haml.DecrIndent()
@@ -303,7 +305,8 @@ func (w *ViewWriter) writeAttribute(attribute *nameValueStr, haml *formatting.In
 	haml.Printf(" %s=\"%s\"", attribute.name, attribute.value)
 }
 
-func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int, nodeType CodeOutputType) (htmlIndex, patternIndex int) {
+func (w *ViewWriter) writeCodeOutput(el *list.Element, haml *formatting.IndentingWriter, src *formatting.IndentingWriter, pattern *formatting.IndentingWriter, currentHtmlIndex int, currentPatternIndex int, nodeType CodeOutputType) (htmlIndex, patternIndex int) {
+	nd := el.Value.(*Node)
 
 	htmlIndex = currentHtmlIndex
 	patternIndex = currentPatternIndex
@@ -329,15 +332,11 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 				objectToInject = getObjectName(nd.text)
 			} else {
 			LookaheadLoop:
-				for n := nd.children.Front(); n != nil; n = n.Next() {
+				for n := el; n != nil; n = n.Next() {
 					node := n.Value.(*Node)
 					switch node.name {
 					case "code_output_dynamic":
 						objectToInject = getObjectName(node.text)
-						break LookaheadLoop
-					case "code_output_static":
-						continue
-					default:
 						break LookaheadLoop
 					}
 				}
@@ -394,7 +393,7 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 	}
 
 	for n := nd.children.Front(); n != nil; n = n.Next() {
-		htmlIndex, patternIndex = w.writeNode(n.Value.(*Node), haml, src, pattern, htmlIndex, patternIndex)
+		htmlIndex, patternIndex = w.writeNode(n, haml, src, pattern, htmlIndex, patternIndex)
 	}
 
 	return
@@ -402,11 +401,17 @@ func (w *ViewWriter) writeCodeOutput(nd *Node, haml *formatting.IndentingWriter,
 
 func getFirstChar(s string) byte {
 	trimmed := strings.TrimLeft(s, "\t ")
+	if len(trimmed) == 0 {
+		return byte(0)
+	}
 	return trimmed[0]
 }
 
 func getLastChar(s string) byte {
 	trimmed := strings.TrimRight(s, "\t ")
+	if len(trimmed) == 0 {
+		return byte(0)
+	}
 	return trimmed[len(trimmed)-1]
 }
 
