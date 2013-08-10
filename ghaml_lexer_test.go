@@ -159,7 +159,7 @@ func Test_TagWithClassAndId(t *testing.T) {
 }
 
 func Test_Attribute(t *testing.T) {
-	input := "%tag1{\"class\":\"yes\", width: 5px} content\n%tag2"
+	input := "%tag1{\"class\"=\"yes\", width=\"5px\"} content\n%tag2"
 	l := lex("tag with attribute", input)
 
 	lexeme := l.nextItem()

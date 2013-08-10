@@ -417,7 +417,7 @@ func lexAttribute(l *lexer) stateFn {
 	l.skipSpacesAndTabs()
 	l.accept("\"")
 	l.ignore()
-	l.acceptRunUntil("\"},")
+	l.acceptRunUntil("\",")
 	l.emit(itemAttributeValue)
 	l.accept("\"")
 	l.ignore()

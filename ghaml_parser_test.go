@@ -133,7 +133,7 @@ func Test_ImplicitWithMultipleClasses(t *testing.T) {
 }
 
 func Test_Attributes(t *testing.T) {
-	hamlStr := "%tag1{\"class\":\"yes\", width: 5px} content"
+	hamlStr := "%tag1{\"class\":\"yes\", width: \"5px\"} content"
 	expStr := "tag1 class='yes' width='5px' (content)"
 
 	parseAndCompare(hamlStr, expStr, t)
