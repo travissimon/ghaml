@@ -103,7 +103,7 @@ func lex(name, input string) *lexer {
 		name:    name,
 		input:   input,
 		state:   lexLineStart,
-		lexemes: make(chan lexeme, 100), // Two items of buffering is sufficient for all state functions
+		lexemes: make(chan lexeme, 100),
 	}
 	return l
 }
